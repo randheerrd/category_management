@@ -7,7 +7,7 @@ export function CatalogueBoard() {
   const { visibleCategories, categories, setView, allCollapsed, collapseAll, expandAll, view } = useCatalogue()
 
   return (
-    <div className="flex flex-col items-start gap-[60px] p-[26px] rounded-lg">
+    <div className="flex flex-col items-start gap-[60px] p-[26px] rounded-[8px]">
       <div className="flex w-full items-center justify-center gap-1 rounded-md border-[0.5px] border-indigo-600/10 bg-indigo-600/5 px-3 py-3 text-center text-sm leading-5 text-indigo-800">
         <p>
           You&rsquo;ve pinned {categories.length} categories on the board, try{" "}
