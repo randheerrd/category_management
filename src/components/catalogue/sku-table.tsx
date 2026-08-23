@@ -1,4 +1,4 @@
-import { Fragment } from "react"
+import { Fragment, useMemo } from "react"
 import { CircleHelp, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -13,14 +13,64 @@ const stockDotClasses: Record<StockStatus, string> = {
   "Out of Stock": "text-destructive",
 }
 
-function SkuRow({ category, sku }: { category: Category; sku: CategorySku }) {
-  const { selectedSkuIds, toggleSkuSelected, openSkuDetail } = useCatalogue()
-  const selected = selectedSkuIds.has(sku.id)
+// Deterministic dot color per category name — no per-category color is stored anywhere,
+// so this hashes the name to pick a consistent swatch across renders.
+const categoryDotColors = [
+  "bg-blue-600",
+  "bg-emerald-600",
+  "bg-amber-500",
+  "bg-rose-600",
+  "bg-violet-600",
+  "bg-cyan-600",
+  "bg-orange-500",
+  "bg-teal-600",
+]
+function categoryDotColor(name: string) {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
+  return categoryDotColors[hash % categoryDotColors.length]
+}
+
+function CategoryBadge({ name }: { name: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-foreground">
+      <span className={`size-1.5 shrink-0 rounded-full ${categoryDotColor(name)}`} />
+      {name}
+    </span>
+  )
+}
+
+/** Thin accent bar on the row's left edge — invisible at rest, appears on hover/selection. */
+const rowAccentClasses =
+  "relative before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary before:opacity-0 before:transition-opacity hover:before:opacity-30 data-[state=selected]:before:opacity-100"
+
+interface ProductRowData {
+  sku: CategorySku
+  skuIds: string[]
+  categories: string[]
+  platforms: string[]
+}
+
+function ProductRow({ row }: { row: ProductRowData }) {
+  const { selectedSkuIds, setSelectedSkuIds, openSkuDetail } = useCatalogue()
+  const { sku, skuIds, categories, platforms } = row
+  const selected = skuIds.every((id) => selectedSkuIds.has(id))
+
+  const toggleAll = () => {
+    const next = new Set(selectedSkuIds)
+    if (selected) skuIds.forEach((id) => next.delete(id))
+    else skuIds.forEach((id) => next.add(id))
+    setSelectedSkuIds(next)
+  }
 
   return (
-    <TableRow data-state={selected ? "selected" : undefined} onClick={() => openSkuDetail(sku.id)} className="cursor-pointer">
+    <TableRow
+      data-state={selected ? "selected" : undefined}
+      onClick={() => openSkuDetail(sku.id)}
+      className={`cursor-pointer ${rowAccentClasses}`}
+    >
       <TableCell onClick={(e) => e.stopPropagation()}>
-        <Checkbox checked={selected} onCheckedChange={() => toggleSkuSelected(sku.id)} />
+        <Checkbox checked={selected} onCheckedChange={toggleAll} />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
@@ -28,22 +78,30 @@ function SkuRow({ category, sku }: { category: Category; sku: CategorySku }) {
           <span className="font-medium text-foreground">{sku.name}</span>
         </div>
       </TableCell>
-      <TableCell>
-        <span className="inline-flex items-center rounded-md border-[0.5px] border-emerald-600/10 bg-emerald-600/5 px-1.5 py-0.5 text-xs font-medium text-emerald-800">
-          {category.description}
-        </span>
+      <TableCell className="whitespace-normal">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {categories.length > 0 ? (
+            categories.map((name) => <CategoryBadge key={name} name={name} />)
+          ) : (
+            <span className="text-muted-foreground">Unsorted</span>
+          )}
+        </div>
       </TableCell>
       <TableCell className="text-muted-foreground">₹ {sku.mrp}</TableCell>
       <TableCell>₹ {sku.price}</TableCell>
       <TableCell>{sku.weightGrams}g</TableCell>
-      <TableCell>
-        <div className="flex items-center gap-1.5 text-foreground">
-          {channelLogos[sku.platform] ? (
-            <img src={channelLogos[sku.platform]} alt="" className="size-3.5 shrink-0 rounded-[2px] object-cover" />
-          ) : (
-            <CircleHelp className="size-3.5 text-muted-foreground" />
-          )}
-          {sku.platform}
+      <TableCell className="whitespace-normal">
+        <div className="flex flex-wrap items-center gap-1.5 text-foreground">
+          {platforms.map((platform) => (
+            <span key={platform} className="inline-flex items-center gap-1">
+              {channelLogos[platform] ? (
+                <img src={channelLogos[platform]} alt="" className="size-3.5 shrink-0 rounded-[2px] object-cover" />
+              ) : (
+                <CircleHelp className="size-3.5 shrink-0 text-muted-foreground" />
+              )}
+              {platform}
+            </span>
+          ))}
         </div>
       </TableCell>
       <TableCell>{sku.darkStores}</TableCell>
@@ -73,26 +131,45 @@ function CategoryGroupHeader({ category }: { category: Category }) {
   )
 }
 
-/** Sortable-by-eye table of every visible SKU, optionally grouped by category. */
+/** Flat, edge-to-edge table of every visible product — unique by product name, each row rolling
+ *  up every category it's pinned in and every platform it's listed on. Optionally grouped by category. */
 export function SkuTable() {
   const { visibleCategories, groupByCategory, selectedSkuIds, setSelectedSkuIds } = useCatalogue()
-  const rows = visibleCategories.flatMap((category) =>
-    category.skus.map((sku) => ({ category, sku }))
-  )
 
-  const allSelected = rows.length > 0 && rows.every(({ sku }) => selectedSkuIds.has(sku.id))
-  const someSelected = rows.some(({ sku }) => selectedSkuIds.has(sku.id))
+  // Unique-by-name rollup: a product can be pinned into several categories and appear with a
+  // different platform in each — this merges every instance sharing a name into one row.
+  const productRows = useMemo(() => {
+    const byName = new Map<string, ProductRowData>()
+    for (const category of visibleCategories) {
+      for (const sku of category.skus) {
+        const existing = byName.get(sku.name)
+        if (existing) {
+          existing.skuIds.push(sku.id)
+          if (!existing.categories.includes(category.title)) existing.categories.push(category.title)
+          if (!existing.platforms.includes(sku.platform)) existing.platforms.push(sku.platform)
+        } else {
+          byName.set(sku.name, {
+            sku,
+            skuIds: [sku.id],
+            categories: [category.title],
+            platforms: [sku.platform],
+          })
+        }
+      }
+    }
+    return Array.from(byName.values())
+  }, [visibleCategories])
+
+  const allSkuIds = useMemo(() => productRows.flatMap((row) => row.skuIds), [productRows])
+  const allSelected = allSkuIds.length > 0 && allSkuIds.every((id) => selectedSkuIds.has(id))
+  const someSelected = allSkuIds.some((id) => selectedSkuIds.has(id))
 
   const toggleSelectAll = () => {
-    if (allSelected) {
-      setSelectedSkuIds(new Set())
-    } else {
-      setSelectedSkuIds(new Set(rows.map(({ sku }) => sku.id)))
-    }
+    setSelectedSkuIds(allSelected ? new Set() : new Set(allSkuIds))
   }
 
   return (
-    <div className="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-card">
+    <div className="flex w-full flex-col border-t border-border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -104,7 +181,7 @@ export function SkuTable() {
               />
             </TableHead>
             <TableHead>Name</TableHead>
-            <TableHead>Title</TableHead>
+            <TableHead>Categories</TableHead>
             <TableHead>MRP</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Grammage</TableHead>
@@ -114,7 +191,7 @@ export function SkuTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 && (
+          {productRows.length === 0 && (
             <TableRow>
               <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                 No SKUs match your search or filters.
@@ -127,17 +204,20 @@ export function SkuTable() {
                   <Fragment key={category.id}>
                     <CategoryGroupHeader category={category} />
                     {category.skus.map((sku) => (
-                      <SkuRow key={sku.id} category={category} sku={sku} />
+                      <ProductRow
+                        key={sku.id}
+                        row={{ sku, skuIds: [sku.id], categories: [category.title], platforms: [sku.platform] }}
+                      />
                     ))}
                   </Fragment>
                 )
               )
-            : rows.map(({ category, sku }) => <SkuRow key={sku.id} category={category} sku={sku} />)}
+            : productRows.map((row) => <ProductRow key={row.sku.name} row={row} />)}
         </TableBody>
       </Table>
 
       <div className="flex h-11 w-full shrink-0 items-center justify-end gap-3 border-t border-border px-4 text-sm text-muted-foreground">
-        <span>Showing all {rows.length} SKUs</span>
+        <span>Showing all {groupByCategory ? visibleCategories.reduce((sum, c) => sum + c.skus.length, 0) : productRows.length} SKUs</span>
         <div className="flex items-center gap-1">
           <button type="button" disabled className="text-muted-foreground/50">
             <ChevronLeft className="size-4" />
