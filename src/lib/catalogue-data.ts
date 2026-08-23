@@ -44,19 +44,30 @@ export function skuCoverageLevel(sku: CategorySku): Exclude<CoverageLevel, "any"
 
 export interface SkuFilters {
   stockStatusFilter: Set<StockStatus>
-  platformFilter: Set<string>
+  platformFilter: string | null
+  darkStoreFilter: string | null
   coverageFilter: CoverageLevel
+  priceMin: number | null
+  grammageFilter: number | null
 }
 
-/** SKU-level half of the Filters popover — category/status live on the category, so those are checked separately. */
+/** SKU-level half of the Filters drawer — category/status live on the category, so those are checked separately. */
 export function skuMatchesFilters(sku: CategorySku, filters: SkuFilters): boolean {
   if (filters.stockStatusFilter.size > 0 && !filters.stockStatusFilter.has(sku.stock)) return false
-  if (filters.platformFilter.size > 0 && !filters.platformFilter.has(sku.platform)) return false
+  if (filters.platformFilter && sku.platform !== filters.platformFilter) return false
+  if (
+    filters.darkStoreFilter &&
+    !sku.darkStoreAvailability.some((store) => store.name === filters.darkStoreFilter && store.filled > 0)
+  ) {
+    return false
+  }
   if (filters.coverageFilter !== "any" && skuCoverageLevel(sku) !== filters.coverageFilter) return false
+  if (filters.priceMin != null && sku.price < filters.priceMin) return false
+  if (filters.grammageFilter != null && sku.weightGrams !== filters.grammageFilter) return false
   return true
 }
 
-export type CategoryStatus = "Active" | "Planning"
+export type CategoryStatus = "Active" | "Planning" | "Discontinued"
 
 export interface Category {
   id: string
@@ -67,6 +78,17 @@ export interface Category {
   status: CategoryStatus
   skus: CategorySku[]
 }
+
+export const channelCoverage = [
+  { name: "Amazon Now", value: 52 },
+  { name: "Blinkit", value: 52 },
+  { name: "BigBasket", value: 52 },
+  { name: "Instamart", value: 52 },
+  { name: "Zepto", value: 52 },
+]
+
+const platformCycle = channelCoverage.map((channel) => channel.name)
+const stockCycle: StockStatus[] = ["In Stock", "In Stock", "Low Stock", "Out of Stock"]
 
 let skuSeq = 0
 export function makeSku(product: Product, stores: number = 4): CategorySku {
@@ -79,9 +101,9 @@ export function makeSku(product: Product, stores: number = 4): CategorySku {
     weightGrams: product.weightGrams,
     stores,
     mrp: product.price + Math.max(1, Math.round(product.price * 0.1)),
-    platform: "Amazon",
+    platform: platformCycle[(skuSeq - 1) % platformCycle.length],
     darkStores: `${stores}/10`,
-    stock: "In Stock",
+    stock: stockCycle[(skuSeq - 1) % stockCycle.length],
     darkStoreAvailability: darkStoreAvailabilityTemplate,
   }
 }
@@ -131,18 +153,10 @@ export const initialCategories: Category[] = [
   { id: "cat-5", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Active", skus: nextSkus(3) },
   { id: "cat-6", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Active", skus: nextSkus(3) },
   { id: "cat-7", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
-  { id: "cat-8", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Planning", skus: [] },
+  { id: "cat-8", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Discontinued", skus: [] },
   { id: "cat-9", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
   { id: "cat-10", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
   { id: "cat-11", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
-]
-
-export const channelCoverage = [
-  { name: "Amazon Now", value: 52 },
-  { name: "Blinkit", value: 52 },
-  { name: "BigBasket", value: 52 },
-  { name: "Instamart", value: 52 },
-  { name: "Zepto", value: 52 },
 ]
 
 export const statusRows = [

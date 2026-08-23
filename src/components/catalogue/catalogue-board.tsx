@@ -37,8 +37,8 @@ export function CatalogueBoard() {
           </p>
         ) : (
           <div className="grid w-full grid-cols-4 items-start gap-5">
-            {visibleCategories.map((category) => (
-              <CategoryCard key={category.id} {...category} />
+            {visibleCategories.map((category, index) => (
+              <CategoryCard key={category.id} {...category} anchorId={index === 0 ? "tour-first-card" : undefined} />
             ))}
           </div>
         )

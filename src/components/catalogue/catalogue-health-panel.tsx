@@ -5,7 +5,7 @@ import { ScoreRing } from "@/components/catalogue/score-ring"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { channelCoverage, statusRows } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
-import channelIcon from "@/assets/channel-icon.svg"
+import { channelLogos } from "@/lib/channel-logos"
 
 /** Left rail summarizing overall catalogue health. */
 export function CatalogueHealthPanel() {
@@ -63,9 +63,11 @@ export function CatalogueHealthPanel() {
             <div className="flex w-full flex-col items-start gap-5">
               {channelCoverage.map((channel) => (
                 <div key={channel.name} className="flex w-full items-center gap-2">
-                  <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-black p-[3px]">
-                    <img src={channelIcon} alt="" className="size-full" />
-                  </div>
+                  <img
+                    src={channelLogos[channel.name]}
+                    alt=""
+                    className="size-5 shrink-0 rounded-sm object-cover"
+                  />
                   <div className="flex flex-1 items-center gap-2">
                     <p className="w-[100px] shrink-0 text-sm leading-5 text-foreground">{channel.name}</p>
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(2,6,23,0.2)]">

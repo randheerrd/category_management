@@ -1,6 +1,6 @@
 import { Search, LayoutGrid, Table as TableIcon, X, PanelLeft } from "lucide-react"
 
-import { FiltersPopover } from "@/components/catalogue/filters-popover"
+import { FiltersDrawer } from "@/components/catalogue/filters-drawer"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useCatalogue } from "@/lib/catalogue-context"
 
@@ -58,7 +58,7 @@ export function BoardToolbar() {
         )}
 
         <div id="tour-filters">
-          <FiltersPopover />
+          <FiltersDrawer />
         </div>
 
         <div className="flex h-8 items-stretch overflow-hidden rounded-lg border border-border bg-secondary">

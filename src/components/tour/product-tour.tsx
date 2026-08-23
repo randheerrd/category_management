@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { Compass } from "lucide-react"
 
 import { TourGuide, type TourStep } from "@/lib/tour-guide"
@@ -53,12 +53,7 @@ const steps: TourStep[] = [
  * Auto-starts once per browser (tracked in localStorage); always replayable via the Tour button.
  */
 export function ProductTour() {
-  const initialized = useRef(false)
-
   useEffect(() => {
-    if (initialized.current) return
-    initialized.current = true
-
     const hasSeenTour = localStorage.getItem(TOUR_SEEN_KEY) === "1"
 
     TourGuide.init({

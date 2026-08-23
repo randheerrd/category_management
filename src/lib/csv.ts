@@ -24,7 +24,7 @@ export interface CsvParseResult {
 const HEADERS = ["Category", "SKU Name", "Price", "MRP", "Weight (g)", "Platform", "Stock", "Status"] as const
 
 const stockValues: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
-const statusValues: CategoryStatus[] = ["Active", "Planning"]
+const statusValues: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
 
 export const CSV_TEMPLATE = [
   HEADERS.join(","),

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import type { CategoryStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
-const statusOptions: CategoryStatus[] = ["Active", "Planning"]
+const statusOptions: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
 
 /** Centered "New category" form. */
 export function AddCategoryDialog() {

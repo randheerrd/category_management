@@ -30,19 +30,27 @@ interface CatalogueContextValue {
   stockStatusFilter: Set<StockStatus>
   toggleStockStatusFilter: (status: StockStatus) => void
   setStockStatusFilterAll: (next: Set<StockStatus>) => void
-  platformFilter: Set<string>
-  togglePlatformFilter: (platform: string) => void
-  setPlatformFilterAll: (next: Set<string>) => void
+  platformFilter: string | null
+  setPlatformFilter: (platform: string | null) => void
+  darkStoreFilter: string | null
+  setDarkStoreFilter: (store: string | null) => void
   coverageFilter: CoverageLevel
   setCoverageFilter: (level: CoverageLevel) => void
+  priceMin: number | null
+  setPriceMin: (value: number | null) => void
+  grammageFilter: number | null
+  setGrammageFilter: (value: number | null) => void
   activeFilterCount: number
   totalSkuCount: number
   countMatchingSkus: (filters: {
     categoryFilterId: string | null
     statusFilter: Set<CategoryStatus>
     stockStatusFilter: Set<StockStatus>
-    platformFilter: Set<string>
+    platformFilter: string | null
+    darkStoreFilter: string | null
     coverageFilter: CoverageLevel
+    priceMin: number | null
+    grammageFilter: number | null
   }) => number
   view: BoardView
   setView: (view: BoardView) => void
@@ -95,8 +103,11 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [statusFilter, setStatusFilter] = useState<Set<CategoryStatus>>(new Set())
   const [categoryFilterId, setCategoryFilterId] = useState<string | null>(null)
   const [stockStatusFilter, setStockStatusFilter] = useState<Set<StockStatus>>(new Set())
-  const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set())
+  const [platformFilter, setPlatformFilter] = useState<string | null>(null)
+  const [darkStoreFilter, setDarkStoreFilter] = useState<string | null>(null)
   const [coverageFilter, setCoverageFilter] = useState<CoverageLevel>("any")
+  const [priceMin, setPriceMin] = useState<number | null>(null)
+  const [grammageFilter, setGrammageFilter] = useState<number | null>(null)
   const [view, setViewState] = useState<BoardView>("grid")
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
   const [date, setDate] = useState<Date>(new Date(2026, 7, 12))
@@ -246,8 +257,11 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     setStatusFilter(new Set())
     setCategoryFilterId(null)
     setStockStatusFilter(new Set())
-    setPlatformFilter(new Set())
+    setPlatformFilter(null)
+    setDarkStoreFilter(null)
     setCoverageFilter("any")
+    setPriceMin(null)
+    setGrammageFilter(null)
   }
 
   const toggleStockStatusFilter = (status: StockStatus) => {
@@ -255,15 +269,6 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       const next = new Set(prev)
       if (next.has(status)) next.delete(status)
       else next.add(status)
-      return next
-    })
-  }
-
-  const togglePlatformFilter = (platform: string) => {
-    setPlatformFilter((prev) => {
-      const next = new Set(prev)
-      if (next.has(platform)) next.delete(platform)
-      else next.add(platform)
       return next
     })
   }
@@ -357,7 +362,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     const query = search.trim().toLowerCase()
     return categories
       .filter((category) => {
-        if (categoryFilterId && category.id !== categoryFilterId) return false
+        if (categoryFilterId && category.id !== categoryFilterId && category.title !== categoryFilterId) return false
         if (statusFilter.size > 0 && !statusFilter.has(category.status)) return false
         if (!query) return true
         const matchesCategory =
@@ -367,30 +372,56 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       })
       .map((category) => ({
         ...category,
-        skus: category.skus.filter((sku) => skuMatchesFilters(sku, { stockStatusFilter, platformFilter, coverageFilter })),
+        skus: category.skus.filter((sku) =>
+          skuMatchesFilters(sku, {
+            stockStatusFilter,
+            platformFilter,
+            darkStoreFilter,
+            coverageFilter,
+            priceMin,
+            grammageFilter,
+          })
+        ),
       }))
-  }, [categories, search, statusFilter, categoryFilterId, stockStatusFilter, platformFilter, coverageFilter])
+  }, [
+    categories,
+    search,
+    statusFilter,
+    categoryFilterId,
+    stockStatusFilter,
+    platformFilter,
+    darkStoreFilter,
+    coverageFilter,
+    priceMin,
+    grammageFilter,
+  ])
 
   const activeFilterCount =
     statusFilter.size +
     (categoryFilterId ? 1 : 0) +
     stockStatusFilter.size +
-    platformFilter.size +
-    (coverageFilter !== "any" ? 1 : 0)
+    (platformFilter ? 1 : 0) +
+    (darkStoreFilter ? 1 : 0) +
+    (coverageFilter !== "any" ? 1 : 0) +
+    (priceMin != null ? 1 : 0) +
+    (grammageFilter != null ? 1 : 0)
 
   const totalSkuCount = useMemo(() => categories.reduce((sum, c) => sum + c.skus.length, 0), [categories])
 
-  // Lets the Filters popover preview a live match count against a draft (not-yet-applied) filter combination.
+  // Lets the Filters drawer preview a live match count against a draft (not-yet-applied) filter combination.
   const countMatchingSkus = (filters: {
     categoryFilterId: string | null
     statusFilter: Set<CategoryStatus>
     stockStatusFilter: Set<StockStatus>
-    platformFilter: Set<string>
+    platformFilter: string | null
+    darkStoreFilter: string | null
     coverageFilter: CoverageLevel
+    priceMin: number | null
+    grammageFilter: number | null
   }) => {
     let count = 0
     for (const category of categories) {
-      if (filters.categoryFilterId && category.id !== filters.categoryFilterId) continue
+      if (filters.categoryFilterId && category.id !== filters.categoryFilterId && category.title !== filters.categoryFilterId) continue
       if (filters.statusFilter.size > 0 && !filters.statusFilter.has(category.status)) continue
       for (const sku of category.skus) {
         if (skuMatchesFilters(sku, filters)) count += 1
@@ -413,10 +444,15 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toggleStockStatusFilter,
     setStockStatusFilterAll: setStockStatusFilter,
     platformFilter,
-    togglePlatformFilter,
-    setPlatformFilterAll: setPlatformFilter,
+    setPlatformFilter,
+    darkStoreFilter,
+    setDarkStoreFilter,
     coverageFilter,
     setCoverageFilter,
+    priceMin,
+    setPriceMin,
+    grammageFilter,
+    setGrammageFilter,
     activeFilterCount,
     totalSkuCount,
     countMatchingSkus,

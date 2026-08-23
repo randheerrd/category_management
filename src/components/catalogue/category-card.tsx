@@ -7,10 +7,19 @@ import { useCatalogue } from "@/lib/catalogue-context"
 const statusTagClasses: Record<Category["status"], string> = {
   Active: "bg-emerald-600/5 border-emerald-600/10 text-emerald-800",
   Planning: "bg-indigo-600/5 border-indigo-600/10 text-indigo-800",
+  Discontinued: "bg-slate-600/5 border-slate-600/10 text-slate-700",
 }
 
 /** A single pinned category cluster on the catalogue board. */
-export function CategoryCard({ id, title, description, itemCount, status, skus }: Category) {
+export function CategoryCard({
+  id,
+  title,
+  description,
+  itemCount,
+  status,
+  skus,
+  anchorId,
+}: Category & { anchorId?: string }) {
   const { collapsedIds, toggleCollapsed, openAddProduct, moveSku, openSkuDetail } = useCatalogue()
   const collapsed = collapsedIds.has(id)
   const [dragOver, setDragOver] = useState(false)
@@ -30,6 +39,7 @@ export function CategoryCard({ id, title, description, itemCount, status, skus }
 
   return (
     <div
+      id={anchorId}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

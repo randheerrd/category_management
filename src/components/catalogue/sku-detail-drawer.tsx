@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { StockStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
-import channelIcon from "@/assets/channel-icon.svg"
+import { channelLogos } from "@/lib/channel-logos"
 
 const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 
@@ -148,9 +148,11 @@ export function SkuDetailDrawer() {
             <div className="flex flex-col gap-4">
               {sku.darkStoreAvailability.map((channel) => (
                 <div key={channel.name} className="flex items-center gap-2">
-                  <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-black p-[3px]">
-                    <img src={channelIcon} alt="" className="size-full" />
-                  </div>
+                  <img
+                    src={channelLogos[channel.name]}
+                    alt=""
+                    className="size-5 shrink-0 rounded-sm object-cover"
+                  />
                   <div className="flex flex-1 items-center gap-2">
                     <p className="w-[90px] shrink-0 text-sm leading-5 text-foreground">{channel.name}</p>
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(2,6,23,0.2)]">

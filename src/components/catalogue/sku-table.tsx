@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Category, CategorySku, StockStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
+import { channelLogos } from "@/lib/channel-logos"
 
 const stockDotClasses: Record<StockStatus, string> = {
   "In Stock": "text-emerald-700",
@@ -37,7 +38,11 @@ function SkuRow({ category, sku }: { category: Category; sku: CategorySku }) {
       <TableCell>{sku.weightGrams}g</TableCell>
       <TableCell>
         <div className="flex items-center gap-1.5 text-foreground">
-          <CircleHelp className="size-3.5 text-muted-foreground" />
+          {channelLogos[sku.platform] ? (
+            <img src={channelLogos[sku.platform]} alt="" className="size-3.5 shrink-0 rounded-[2px] object-cover" />
+          ) : (
+            <CircleHelp className="size-3.5 text-muted-foreground" />
+          )}
           {sku.platform}
         </div>
       </TableCell>
