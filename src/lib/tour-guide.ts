@@ -36,7 +36,6 @@ export interface TourGuideOptions {
 
 let steps: TourStep[] = []
 let tourStep = -1
-let userMode: TourMode = "new"
 let hooks: {
   onBeforeStart: (() => void) | null
   onReset: (() => void) | null
@@ -61,7 +60,6 @@ function getVisibleTarget(sel: string | null): HTMLElement | null {
 }
 
 function setMode(mode: TourMode) {
-  userMode = mode
   const newBtn = $("#tgUserNewBtn")
   const retBtn = $("#tgUserReturningBtn")
   if (newBtn) newBtn.classList.toggle("active", mode === "new")
