@@ -18,7 +18,7 @@ export function SelectionActionBar() {
   const selectedIds = Array.from(selectedSkuIds)
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
+    <div className="pointer-events-none sticky bottom-6 z-20 flex w-full justify-center">
       <div className="pointer-events-auto flex h-11 items-center gap-3 rounded-full bg-slate-950 px-4 text-sm font-medium text-white shadow-[0px_8px_24px_-4px_rgba(0,0,0,0.35)]">
         <span className="whitespace-nowrap">{count} Selected</span>
         <span className="h-4 w-px bg-white/20" />

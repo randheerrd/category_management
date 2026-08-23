@@ -18,7 +18,7 @@ export function BoardToolbar() {
   } = useCatalogue()
 
   return (
-    <div className="flex h-12 w-full shrink-0 items-center justify-between border-b border-border px-4 py-2">
+    <div className="sticky top-0 z-20 flex h-12 w-full shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
       <div className="flex items-center gap-2">
         <button
           type="button"

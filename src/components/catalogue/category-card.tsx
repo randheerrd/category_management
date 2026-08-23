@@ -1,14 +1,72 @@
-import { useState, type DragEvent } from "react"
+import { useRef, useState, type DragEvent } from "react"
 import { ChevronDown, Plus, GripVertical } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
-import type { Category } from "@/lib/catalogue-data"
+import type { Category, CategorySku } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 const statusTagClasses: Record<Category["status"], string> = {
   Active: "bg-emerald-600/5 border-emerald-600/10 text-emerald-800",
   Planning: "bg-indigo-600/5 border-indigo-600/10 text-indigo-800",
   Discontinued: "bg-slate-600/5 border-slate-600/10 text-slate-700",
+}
+
+interface SkuRowProps {
+  sku: CategorySku
+  categoryId: string
+  selected: boolean
+  onToggleSelected: () => void
+  onOpenDetail: () => void
+}
+
+/**
+ * One SKU row on a category card. Dragging is gated to the grip handle (not the
+ * whole row) so it doesn't fight with clicking the row to open details or clicking
+ * the checkbox — the drag image still shows the full row via setDragImage.
+ */
+function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: SkuRowProps) {
+  const rowRef = useRef<HTMLDivElement>(null)
+
+  const handleDragStart = (e: DragEvent) => {
+    e.dataTransfer.setData("text/sku-id", sku.id)
+    e.dataTransfer.setData("text/category-id", categoryId)
+    e.dataTransfer.effectAllowed = "move"
+    if (rowRef.current) {
+      const rect = rowRef.current.getBoundingClientRect()
+      e.dataTransfer.setDragImage(rowRef.current, e.clientX - rect.left, e.clientY - rect.top)
+    }
+  }
+
+  return (
+    <div
+      ref={rowRef}
+      onClick={onOpenDetail}
+      className={`group/sku flex w-full cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-2 transition-colors ${
+        selected
+          ? "border-primary/30 bg-primary/5"
+          : "border-slate-100 bg-[rgba(241,245,249,0.4)] hover:border-slate-200 hover:bg-[rgba(241,245,249,0.9)]"
+      }`}
+    >
+      <img src={sku.image} alt="" className="size-8 shrink-0 rounded-[3.667px] object-cover" />
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
+        <p className="text-sm leading-5 font-medium text-foreground">{sku.name}</p>
+        <p className="text-xs leading-4 text-muted-foreground">
+          ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Stores
+        </p>
+      </div>
+      <span
+        draggable
+        onDragStart={handleDragStart}
+        onClick={(e) => e.stopPropagation()}
+        className="flex shrink-0 cursor-grab items-center opacity-0 transition-opacity group-hover/sku:opacity-100 active:cursor-grabbing"
+      >
+        <GripVertical className="size-3.5 text-muted-foreground/50" />
+      </span>
+      <span onClick={(e) => e.stopPropagation()} className="flex shrink-0 items-center">
+        <Checkbox checked={selected} onCheckedChange={onToggleSelected} />
+      </span>
+    </div>
+  )
 }
 
 /** A single pinned category cluster on the catalogue board. */
@@ -96,37 +154,16 @@ export function CategoryCard({
       {!collapsed &&
         (skus.length > 0 ? (
           <div className="flex w-full flex-col items-start gap-2 p-1">
-            {skus.map((sku) => {
-              const selected = selectedSkuIds.has(sku.id)
-              return (
-                <div
-                  key={sku.id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("text/sku-id", sku.id)
-                    e.dataTransfer.setData("text/category-id", id)
-                  }}
-                  onClick={() => openSkuDetail(sku.id)}
-                  className={`group/sku flex w-full cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-2 transition-colors active:cursor-grabbing ${
-                    selected
-                      ? "border-primary/30 bg-primary/5"
-                      : "border-slate-100 bg-[rgba(241,245,249,0.4)] hover:border-slate-200 hover:bg-[rgba(241,245,249,0.9)]"
-                  }`}
-                >
-                  <GripVertical className="size-3.5 shrink-0 cursor-grab text-muted-foreground/50 opacity-0 transition-opacity group-hover/sku:opacity-100" />
-                  <span onClick={(e) => e.stopPropagation()} className="flex shrink-0 items-center">
-                    <Checkbox checked={selected} onCheckedChange={() => toggleSkuSelected(sku.id)} />
-                  </span>
-                  <img src={sku.image} alt="" className="size-8 shrink-0 rounded-[3.667px] object-cover" />
-                  <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
-                    <p className="text-sm leading-5 font-medium text-foreground">{sku.name}</p>
-                    <p className="text-xs leading-4 text-muted-foreground">
-                      ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Stores
-                    </p>
-                  </div>
-                </div>
-              )
-            })}
+            {skus.map((sku) => (
+              <SkuRow
+                key={sku.id}
+                sku={sku}
+                categoryId={id}
+                selected={selectedSkuIds.has(sku.id)}
+                onToggleSelected={() => toggleSkuSelected(sku.id)}
+                onOpenDetail={() => openSkuDetail(sku.id)}
+              />
+            ))}
           </div>
         ) : (
           <div
