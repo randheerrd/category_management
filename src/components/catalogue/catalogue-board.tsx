@@ -36,7 +36,7 @@ export function CatalogueBoard() {
             No categories match your search or filters.
           </p>
         ) : (
-          <div className="grid w-full grid-cols-4 items-start gap-5">
+          <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-5">
             {visibleCategories.map((category, index) => (
               <CategoryCard key={category.id} {...category} anchorId={index === 0 ? "tour-first-card" : undefined} />
             ))}
