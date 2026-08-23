@@ -35,7 +35,7 @@ function categoryTagClass(name: string) {
 function CategoryBadge({ name }: { name: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-md border-[0.5px] px-1.5 py-0.5 text-xs font-medium whitespace-nowrap ${categoryTagClass(name)}`}
+      className={`inline-flex items-center rounded-md border-[0.5px] px-1.5 py-0.5 text-xs font-normal whitespace-nowrap ${categoryTagClass(name)}`}
     >
       {name}
     </span>
@@ -69,19 +69,19 @@ function ProductRow({ row }: { row: ProductRowData }) {
     <TableRow
       data-state={selected ? "selected" : undefined}
       onClick={() => openSkuDetail(sku.id)}
-      className={`cursor-pointer ${rowAccentClasses}`}
+      className={`h-9 cursor-pointer font-normal [&>td]:h-9 [&>td]:py-0 ${rowAccentClasses}`}
     >
       <TableCell className="w-12" onClick={(e) => e.stopPropagation()}>
         <Checkbox checked={selected} onCheckedChange={toggleAll} />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          <img src={sku.image} alt="" className="size-6 shrink-0 rounded-[3px] object-cover" />
-          <span className="font-medium text-foreground">{sku.name}</span>
+          <img src={sku.image} alt="" className="size-5 shrink-0 rounded-[3px] object-cover" />
+          <span className="font-normal text-foreground">{sku.name}</span>
         </div>
       </TableCell>
-      <TableCell className="whitespace-normal">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <TableCell>
+        <div className="flex items-center gap-1.5">
           {categories.length > 0 ? (
             categories.map((name) => <CategoryBadge key={name} name={name} />)
           ) : (
@@ -89,11 +89,11 @@ function ProductRow({ row }: { row: ProductRowData }) {
           )}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground">₹ {sku.mrp}</TableCell>
-      <TableCell>₹ {sku.price}</TableCell>
-      <TableCell>{sku.weightGrams}g</TableCell>
-      <TableCell className="whitespace-normal">
-        <div className="flex flex-wrap items-center gap-1.5 text-foreground">
+      <TableCell className="font-normal text-muted-foreground">₹ {sku.mrp}</TableCell>
+      <TableCell className="font-normal">₹ {sku.price}</TableCell>
+      <TableCell className="font-normal">{sku.weightGrams}g</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1.5 font-normal text-foreground">
           {platforms.map((platform) => (
             <span key={platform} className="inline-flex items-center gap-1">
               {channelLogos[platform] ? (
@@ -106,9 +106,9 @@ function ProductRow({ row }: { row: ProductRowData }) {
           ))}
         </div>
       </TableCell>
-      <TableCell>{sku.darkStores}</TableCell>
+      <TableCell className="font-normal">{sku.darkStores}</TableCell>
       <TableCell>
-        <span className={`inline-flex items-center gap-1 text-xs font-medium ${stockDotClasses[sku.stock]}`}>
+        <span className={`inline-flex items-center gap-1 text-xs font-normal ${stockDotClasses[sku.stock]}`}>
           <span aria-hidden className="text-[8px] leading-none">
             •
           </span>
@@ -121,11 +121,11 @@ function ProductRow({ row }: { row: ProductRowData }) {
 
 function CategoryGroupHeader({ category }: { category: Category }) {
   return (
-    <TableRow className="bg-slate-50 hover:bg-slate-50">
-      <TableCell colSpan={9} className="py-2 text-sm">
+    <TableRow className="h-9 bg-slate-50 font-normal hover:bg-slate-50">
+      <TableCell colSpan={9} className="py-2 text-sm font-normal">
         <span className="text-muted-foreground">Category: </span>
-        <span className="font-semibold text-foreground">{category.title}</span>{" "}
-        <span className="ml-1 inline-flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+        <span className="font-normal text-foreground">{category.title}</span>{" "}
+        <span className="ml-1 inline-flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-normal text-primary-foreground">
           {category.skus.length}
         </span>
       </TableCell>
@@ -174,22 +174,22 @@ export function SkuTable() {
     <div className="flex w-full flex-col border-t border-border bg-background">
       <Table>
         <TableHeader>
-          <TableRow className="bg-[rgba(241,245,249,0.4)] hover:bg-[rgba(241,245,249,0.4)]">
-            <TableHead className="w-12">
+          <TableRow className="h-9 bg-[rgba(241,245,249,0.4)] font-normal hover:bg-[rgba(241,245,249,0.4)] [&>th]:h-9 [&>th]:py-0">
+            <TableHead className="w-12 font-normal">
               <Checkbox
                 checked={allSelected}
                 indeterminate={!allSelected && someSelected}
                 onCheckedChange={toggleSelectAll}
               />
             </TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Categories</TableHead>
-            <TableHead>MRP</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead>Grammage</TableHead>
-            <TableHead>Platform</TableHead>
-            <TableHead>Dark Stores</TableHead>
-            <TableHead>Stock</TableHead>
+            <TableHead className="font-normal">Name</TableHead>
+            <TableHead className="font-normal">Categories</TableHead>
+            <TableHead className="font-normal">MRP</TableHead>
+            <TableHead className="font-normal">Price</TableHead>
+            <TableHead className="font-normal">Grammage</TableHead>
+            <TableHead className="font-normal">Platform</TableHead>
+            <TableHead className="font-normal">Dark Stores</TableHead>
+            <TableHead className="font-normal">Stock</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

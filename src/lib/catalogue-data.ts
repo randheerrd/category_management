@@ -80,11 +80,11 @@ export interface Category {
 }
 
 export const channelCoverage = [
-  { name: "Amazon Now", value: 52 },
-  { name: "Blinkit", value: 52 },
-  { name: "BigBasket", value: 52 },
-  { name: "Instamart", value: 52 },
-  { name: "Zepto", value: 52 },
+  { name: "Amazon Now", value: 88 },
+  { name: "Blinkit", value: 91 },
+  { name: "BigBasket", value: 76 },
+  { name: "Instamart", value: 69 },
+  { name: "Zepto", value: 58 },
 ]
 
 const platformCycle = channelCoverage.map((channel) => channel.name)
@@ -160,7 +160,7 @@ export const initialCategories: Category[] = [
 ]
 
 export const statusRows = [
-  { label: "45 SKUs Live", helper: "Ready across all channel", value: "52%" },
-  { label: "3 Need attention", helper: "Missing coverage or details", value: "7%" },
-  { label: "2 in draft", helper: "Not Yet Published", value: "2%" },
+  { label: "45 SKUs Live", helper: "Ready across all channel", value: "90%" },
+  { label: "3 Need attention", helper: "Missing coverage or details", value: "6%" },
+  { label: "2 in draft", helper: "Not Yet Published", value: "4%" },
 ]
