@@ -13,28 +13,30 @@ const stockDotClasses: Record<StockStatus, string> = {
   "Out of Stock": "text-destructive",
 }
 
-// Deterministic dot color per category name — no per-category color is stored anywhere,
-// so this hashes the name to pick a consistent swatch across renders.
-const categoryDotColors = [
-  "bg-blue-600",
-  "bg-emerald-600",
-  "bg-amber-500",
-  "bg-rose-600",
-  "bg-violet-600",
-  "bg-cyan-600",
-  "bg-orange-500",
-  "bg-teal-600",
+// Deterministic tag color per category name — no per-category color is stored anywhere,
+// so this hashes the name to pick a consistent swatch across renders. Matches the
+// ".tag-base" treatment used elsewhere (colored bg/border/text at low opacity).
+const categoryTagClasses = [
+  "border-emerald-600/10 bg-emerald-600/5 text-emerald-800",
+  "border-blue-600/10 bg-blue-600/5 text-blue-800",
+  "border-amber-600/10 bg-amber-600/5 text-amber-800",
+  "border-rose-600/10 bg-rose-600/5 text-rose-800",
+  "border-violet-600/10 bg-violet-600/5 text-violet-800",
+  "border-cyan-600/10 bg-cyan-600/5 text-cyan-800",
+  "border-orange-600/10 bg-orange-600/5 text-orange-800",
+  "border-teal-600/10 bg-teal-600/5 text-teal-800",
 ]
-function categoryDotColor(name: string) {
+function categoryTagClass(name: string) {
   let hash = 0
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
-  return categoryDotColors[hash % categoryDotColors.length]
+  return categoryTagClasses[hash % categoryTagClasses.length]
 }
 
 function CategoryBadge({ name }: { name: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-foreground">
-      <span className={`size-1.5 shrink-0 rounded-full ${categoryDotColor(name)}`} />
+    <span
+      className={`inline-flex items-center rounded-md border-[0.5px] px-1.5 py-0.5 text-xs font-medium whitespace-nowrap ${categoryTagClass(name)}`}
+    >
       {name}
     </span>
   )
@@ -69,12 +71,12 @@ function ProductRow({ row }: { row: ProductRowData }) {
       onClick={() => openSkuDetail(sku.id)}
       className={`cursor-pointer ${rowAccentClasses}`}
     >
-      <TableCell onClick={(e) => e.stopPropagation()}>
+      <TableCell className="w-12" onClick={(e) => e.stopPropagation()}>
         <Checkbox checked={selected} onCheckedChange={toggleAll} />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          <img src={sku.image} alt="" className="size-8 shrink-0 rounded-[3.667px] object-cover" />
+          <img src={sku.image} alt="" className="size-6 shrink-0 rounded-[3px] object-cover" />
           <span className="font-medium text-foreground">{sku.name}</span>
         </div>
       </TableCell>
@@ -169,11 +171,11 @@ export function SkuTable() {
   }
 
   return (
-    <div className="flex w-full flex-col border-t border-border">
+    <div className="flex w-full flex-col border-t border-border bg-background">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>
+          <TableRow className="bg-[rgba(241,245,249,0.4)] hover:bg-[rgba(241,245,249,0.4)]">
+            <TableHead className="w-12">
               <Checkbox
                 checked={allSelected}
                 indeterminate={!allSelected && someSelected}
