@@ -1,6 +1,7 @@
 import { useState, type DragEvent } from "react"
-import { ChevronDown, Plus } from "lucide-react"
+import { ChevronDown, Plus, GripVertical } from "lucide-react"
 
+import { Checkbox } from "@/components/ui/checkbox"
 import type { Category } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
@@ -20,7 +21,8 @@ export function CategoryCard({
   skus,
   anchorId,
 }: Category & { anchorId?: string }) {
-  const { collapsedIds, toggleCollapsed, openAddProduct, moveSku, openSkuDetail } = useCatalogue()
+  const { collapsedIds, toggleCollapsed, openAddProduct, moveSku, openSkuDetail, selectedSkuIds, toggleSkuSelected } =
+    useCatalogue()
   const collapsed = collapsedIds.has(id)
   const [dragOver, setDragOver] = useState(false)
 
@@ -94,26 +96,37 @@ export function CategoryCard({
       {!collapsed &&
         (skus.length > 0 ? (
           <div className="flex w-full flex-col items-start gap-2 p-1">
-            {skus.map((sku) => (
-              <div
-                key={sku.id}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("text/sku-id", sku.id)
-                  e.dataTransfer.setData("text/category-id", id)
-                }}
-                onClick={() => openSkuDetail(sku.id)}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-slate-100 bg-[rgba(241,245,249,0.4)] px-3 py-2 transition-colors hover:border-slate-200 hover:bg-[rgba(241,245,249,0.9)] active:cursor-grabbing"
-              >
-                <img src={sku.image} alt="" className="size-8 shrink-0 rounded-[3.667px] object-cover" />
-                <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
-                  <p className="text-sm leading-5 font-medium text-foreground">{sku.name}</p>
-                  <p className="text-xs leading-4 text-muted-foreground">
-                    ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Stores
-                  </p>
+            {skus.map((sku) => {
+              const selected = selectedSkuIds.has(sku.id)
+              return (
+                <div
+                  key={sku.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/sku-id", sku.id)
+                    e.dataTransfer.setData("text/category-id", id)
+                  }}
+                  onClick={() => openSkuDetail(sku.id)}
+                  className={`group/sku flex w-full cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-2 transition-colors active:cursor-grabbing ${
+                    selected
+                      ? "border-primary/30 bg-primary/5"
+                      : "border-slate-100 bg-[rgba(241,245,249,0.4)] hover:border-slate-200 hover:bg-[rgba(241,245,249,0.9)]"
+                  }`}
+                >
+                  <GripVertical className="size-3.5 shrink-0 cursor-grab text-muted-foreground/50 opacity-0 transition-opacity group-hover/sku:opacity-100" />
+                  <span onClick={(e) => e.stopPropagation()} className="flex shrink-0 items-center">
+                    <Checkbox checked={selected} onCheckedChange={() => toggleSkuSelected(sku.id)} />
+                  </span>
+                  <img src={sku.image} alt="" className="size-8 shrink-0 rounded-[3.667px] object-cover" />
+                  <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
+                    <p className="text-sm leading-5 font-medium text-foreground">{sku.name}</p>
+                    <p className="text-xs leading-4 text-muted-foreground">
+                      ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Stores
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div
