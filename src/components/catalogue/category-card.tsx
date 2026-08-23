@@ -103,7 +103,7 @@ export function CategoryCard({
                   e.dataTransfer.setData("text/category-id", id)
                 }}
                 onClick={() => openSkuDetail(sku.id)}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-slate-100 bg-[rgba(241,245,249,0.4)] px-3 py-2 active:cursor-grabbing"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-slate-100 bg-[rgba(241,245,249,0.4)] px-3 py-2 transition-colors hover:border-slate-200 hover:bg-[rgba(241,245,249,0.9)] active:cursor-grabbing"
               >
                 <img src={sku.image} alt="" className="size-8 shrink-0 rounded-[3.667px] object-cover" />
                 <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
