@@ -1,0 +1,183 @@
+/* ============================================================
+   TOUR GUIDE — spotlight walkthrough styles
+   ------------------------------------------------------------
+   Adapted from the standalone tour-guide.css base: same class
+   names/structure, retargeted to this app's real design tokens
+   (slate palette, --font-sans = SF Pro Text stack) instead of the
+   original demo's Fraunces/olive theme.
+   ============================================================ */
+
+:root {
+  --tg-card: var(--card);
+  --tg-card-border: var(--border);
+  --tg-ink: var(--foreground);
+  --tg-ink-soft: var(--muted-foreground);
+  --tg-ink-faint: color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+  --tg-primary: var(--primary);
+  --tg-primary-foreground: var(--primary-foreground);
+  --tg-gold: #d97706; /* amber-600 — matches the app's existing "needs attention" accent */
+  --tg-radius-lg: 12px;
+  --tg-shadow-panel: 0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.tg-view-switch {
+  display: flex;
+  background: var(--tg-card);
+  border: 1px solid var(--tg-card-border);
+  border-radius: 999px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.tg-view-switch button {
+  border: none;
+  background: transparent;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--tg-ink-soft);
+  cursor: pointer;
+  font-family: inherit;
+}
+.tg-view-switch button.active {
+  background: var(--tg-primary);
+  color: var(--tg-primary-foreground);
+}
+
+.tg-replay-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--tg-card-border);
+  background: transparent;
+  color: var(--tg-ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.tg-replay-btn:hover {
+  background: var(--muted);
+}
+
+/* ---- overlay ---- */
+.tg-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 9984;
+  background: transparent;
+}
+.tg-spotlight {
+  position: fixed;
+  z-index: 9985;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.55);
+  border: 2px solid var(--tg-gold);
+  border-radius: 12px;
+  pointer-events: none;
+  transition:
+    top 0.3s ease,
+    left 0.3s ease,
+    width 0.3s ease,
+    height 0.3s ease;
+}
+.tg-card {
+  position: fixed;
+  z-index: 9986;
+  width: 300px;
+  max-width: 88vw;
+  background: var(--tg-card);
+  border: 1px solid var(--tg-card-border);
+  border-radius: var(--tg-radius-lg);
+  box-shadow: var(--tg-shadow-panel);
+  padding: 18px;
+  font-family: var(--font-sans);
+  transition:
+    top 0.3s ease,
+    left 0.3s ease;
+}
+.tg-progress {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.tg-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--tg-card-border);
+}
+.tg-dot.done {
+  background: var(--tg-primary);
+}
+.tg-dot.active {
+  background: var(--tg-gold);
+}
+.tg-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tg-gold);
+  margin-bottom: 6px;
+}
+.tg-title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--tg-ink);
+}
+.tg-body {
+  font-size: 12.5px;
+  color: var(--tg-ink-soft);
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+.tg-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tg-skip {
+  background: transparent;
+  border: none;
+  color: var(--tg-ink-faint);
+  font-size: 11.5px;
+  text-decoration: underline;
+  padding: 4px 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tg-nav-right {
+  display: flex;
+  gap: 8px;
+}
+.tg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tg-btn-primary {
+  background: var(--tg-primary);
+  color: var(--tg-primary-foreground);
+}
+.tg-btn-ghost {
+  background: transparent;
+  color: var(--tg-ink-soft);
+  border-color: var(--tg-card-border);
+}
+.tg-btn-ghost:hover {
+  background: var(--tg-card);
+}
