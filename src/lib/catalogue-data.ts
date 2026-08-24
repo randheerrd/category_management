@@ -271,6 +271,20 @@ export function computeCatalogueIssues(categories: Category[]): HealthIssue[] {
       })
     }
 
+    // A category can be flagged as Unlisted on top of its Planning/understaffed check
+    // above — being unpinned from every real category is its own distinct problem.
+    if (category.id === UNLISTED_CATEGORY_ID && category.skus.length > 0) {
+      issues.push({
+        id: "cat-issue-unlisted",
+        type: "category",
+        label: category.title,
+        helper: `${category.skus.length} SKU${category.skus.length === 1 ? "" : "s"} not pinned to any category`,
+        categoryId: category.id,
+      })
+    }
+
+    // Independent checks, not if/else — a SKU can be both out of stock AND
+    // under-covered, and both problems should show up, not just the first one found.
     for (const sku of category.skus) {
       if (sku.stock === "Out of Stock") {
         issues.push({
@@ -281,7 +295,8 @@ export function computeCatalogueIssues(categories: Category[]): HealthIssue[] {
           categoryId: category.id,
           skuId: sku.id,
         })
-      } else if (skuCoverageLevel(sku) !== "full") {
+      }
+      if (skuCoverageLevel(sku) !== "full") {
         issues.push({
           id: `sku-issue-${sku.id}-coverage`,
           type: "sku",
@@ -329,12 +344,16 @@ export function computeStatusBreakdown(categories: Category[]) {
   ]
 }
 
-/** Sums filled/total across every visible SKU's darkStoreAvailability, per channel. */
+/** Sums filled/total across every visible SKU's darkStoreAvailability, per channel.
+ *  Discontinued categories are excluded — same rule computeSkuHealthCounts uses, so
+ *  a catalogue with several fully-stocked-but-retired SKUs doesn't show coverage
+ *  numbers stronger than the health score they're already excluded from. */
 export function computeChannelCoverage(categories: Category[]) {
   const totals = new Map<string, { filled: number; total: number }>()
   for (const name of channelNames) totals.set(name, { filled: 0, total: 0 })
 
   for (const category of categories) {
+    if (category.status === "Discontinued") continue
     for (const sku of category.skus) {
       for (const store of sku.darkStoreAvailability) {
         const entry = totals.get(store.name)
