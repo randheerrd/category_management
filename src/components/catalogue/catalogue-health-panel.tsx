@@ -85,7 +85,6 @@ export function CatalogueHealthPanel() {
     setCoverageFilter,
     setCategoryFilterIds,
     setStatusFilterAll,
-    setView,
   } = useCatalogue()
   const [reportOpen, setReportOpen] = useState(false)
   const [issuesOpen, setIssuesOpen] = useState(false)
@@ -113,7 +112,6 @@ export function CatalogueHealthPanel() {
         clearFilters()
         setStockStatusFilterAll(new Set(["In Stock"]))
         setCoverageFilter("full")
-        setView("table")
       },
     },
     {
@@ -123,7 +121,6 @@ export function CatalogueHealthPanel() {
       onClick: () => {
         clearFilters()
         setCategoryFilterIds(new Set([UNLISTED_CATEGORY_ID]))
-        setView("table")
       },
     },
     {
