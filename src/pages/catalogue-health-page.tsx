@@ -8,6 +8,7 @@ import { SkuDetailDrawer } from "@/components/catalogue/sku-detail-drawer"
 import { AddProductDialog } from "@/components/catalogue/add-product-dialog"
 import { AddCategoryDialog } from "@/components/catalogue/add-category-dialog"
 import { ManageCategoryDialog } from "@/components/catalogue/manage-category-dialog"
+import { ProductTour } from "@/components/tour/product-tour"
 import { Toaster } from "@/components/ui/toaster"
 import { useCatalogue } from "@/lib/catalogue-context"
 
@@ -43,6 +44,7 @@ export function CatalogueHealthPage() {
       <AddProductDialog />
       <AddCategoryDialog />
       <ManageCategoryDialog />
+      <ProductTour />
       <Toaster />
     </div>
   )

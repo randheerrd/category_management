@@ -297,27 +297,34 @@ export function computeCatalogueIssues(categories: Category[]): HealthIssue[] {
   return issues
 }
 
-/** Every pinned SKU falls into exactly one bucket (checked in this order), so the three
- *  rows always sum to the total SKU count. */
-export function computeStatusBreakdown(categories: Category[]) {
-  let draft = 0
+/** Every pinned SKU in a non-Discontinued category falls into exactly one bucket — the
+ *  single source of truth behind the score, the breakdown rows, and the "N need
+ *  attention" banner, so those three numbers can never disagree with each other.
+ *  Discontinued-category SKUs are excluded: they're retired on purpose, not a problem. */
+export function computeSkuHealthCounts(categories: Category[]) {
   let live = 0
-  let needsAttention = 0
+  let attention = 0
+  let draft = 0
 
   for (const category of categories) {
+    if (category.status === "Discontinued") continue
     for (const sku of category.skus) {
       if (category.status === "Planning") draft += 1
       else if (sku.stock === "In Stock" && skuCoverageLevel(sku) === "full") live += 1
-      else needsAttention += 1
+      else attention += 1
     }
   }
 
-  const total = draft + live + needsAttention
+  return { live, attention, draft, total: live + attention + draft }
+}
+
+export function computeStatusBreakdown(categories: Category[]) {
+  const { live, attention, draft, total } = computeSkuHealthCounts(categories)
   const pct = (count: number) => (total === 0 ? "0%" : `${Math.round((count / total) * 100)}%`)
 
   return [
     { label: `${live} SKUs Live`, helper: "Ready across all channels", value: pct(live) },
-    { label: `${needsAttention} Need attention`, helper: "Missing coverage or details", value: pct(needsAttention) },
+    { label: `${attention} Need attention`, helper: "Missing coverage or details", value: pct(attention) },
     { label: `${draft} in draft`, helper: "Not Yet Published", value: pct(draft) },
   ]
 }
@@ -345,24 +352,10 @@ export function computeChannelCoverage(categories: Category[]) {
   })
 }
 
-/** Equal-weighted average of stock health, category readiness, and channel coverage —
- *  the one place to retune weighting if the formula needs to change later. */
+/** The score IS the "SKUs Live" percentage from computeSkuHealthCounts — not a separate
+ *  blended formula. That's what keeps the ring, the "N need attention" banner, and the
+ *  breakdown row all telling the same story instead of three unrelated numbers. */
 export function computeHealthScore(categories: Category[]): number {
-  const allSkus = categories.flatMap((c) => c.skus)
-  const stockHealth =
-    allSkus.length === 0
-      ? 100
-      : ((allSkus.filter((s) => s.stock === "In Stock").length +
-          0.5 * allSkus.filter((s) => s.stock === "Low Stock").length) /
-          allSkus.length) *
-        100
-
-  const readyCategories = categories.filter((c) => c.status === "Active" && c.skus.length >= c.itemCount).length
-  const categoryReadiness = categories.length === 0 ? 100 : (readyCategories / categories.length) * 100
-
-  const coverageValues = computeChannelCoverage(categories).map((c) => c.value)
-  const channelCoverageScore =
-    coverageValues.length === 0 ? 100 : coverageValues.reduce((sum, v) => sum + v, 0) / coverageValues.length
-
-  return Math.round((stockHealth + categoryReadiness + channelCoverageScore) / 3)
+  const { live, total } = computeSkuHealthCounts(categories)
+  return total === 0 ? 100 : Math.round((live / total) * 100)
 }

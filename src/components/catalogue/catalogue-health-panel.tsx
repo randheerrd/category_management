@@ -22,6 +22,7 @@ import {
   computeCatalogueIssues,
   computeChannelCoverage,
   computeHealthScore,
+  computeSkuHealthCounts,
   computeStatusBreakdown,
   type ActivityType,
 } from "@/lib/catalogue-data"
@@ -81,6 +82,9 @@ export function CatalogueHealthPanel() {
   const statusRows = computeStatusBreakdown(categories)
   const channelCoverage = computeChannelCoverage(categories)
   const issues = computeCatalogueIssues(categories)
+  // Same count as the "Need attention" breakdown row below it — the banner and the row
+  // must always agree, so both read off computeSkuHealthCounts instead of separate math.
+  const { attention: attentionCount } = computeSkuHealthCounts(categories)
 
   const allSkus = categories.flatMap((c) => c.skus)
   const hasData = allSkus.length > 0
@@ -153,7 +157,7 @@ export function CatalogueHealthPanel() {
               <div className="flex w-full flex-col items-center text-center">
                 <p className="w-full text-base leading-6 font-semibold text-foreground">{scoreLabel(score)}</p>
                 <p className="w-full text-sm leading-5 text-amber-600">
-                  {issues.length} Item{issues.length === 1 ? "" : "s"} need your attention
+                  {attentionCount} Item{attentionCount === 1 ? "" : "s"} need your attention
                 </p>
               </div>
 
