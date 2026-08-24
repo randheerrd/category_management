@@ -634,9 +634,23 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
           return false
         if (statusFilter.size > 0 && !statusFilter.has(category.status)) return false
         if (!query) return true
+        // Open search — matches on name, category (title/description), price, item
+        // count, grammage, and status (Active/Planning/Discontinued/stock), not just
+        // the SKU name.
         const matchesCategory =
-          category.title.toLowerCase().includes(query) || category.description.toLowerCase().includes(query)
-        const matchesSku = category.skus.some((sku) => sku.name.toLowerCase().includes(query))
+          category.title.toLowerCase().includes(query) ||
+          category.description.toLowerCase().includes(query) ||
+          category.status.toLowerCase().includes(query) ||
+          String(category.itemCount).includes(query)
+        const matchesSku = category.skus.some(
+          (sku) =>
+            sku.name.toLowerCase().includes(query) ||
+            sku.platform.toLowerCase().includes(query) ||
+            sku.stock.toLowerCase().includes(query) ||
+            String(sku.price).includes(query) ||
+            String(sku.mrp).includes(query) ||
+            String(sku.weightGrams).includes(query)
+        )
         return matchesCategory || matchesSku
       })
       .map((category) => ({
