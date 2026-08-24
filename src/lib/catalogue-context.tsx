@@ -6,6 +6,7 @@ import {
   makeSku,
   createSku,
   skuMatchesFilters,
+  computeDarkStoreAvailability,
   UNLISTED_CATEGORY_ID,
   type ActivityEntry,
   type ActivityType,
@@ -16,6 +17,7 @@ import {
   type NewProductInput,
   type StockStatus,
 } from "@/lib/catalogue-data"
+import { darkStoreLocations } from "@/lib/dark-store-locations"
 import { products } from "@/lib/products"
 import type { CsvRow } from "@/lib/csv"
 import { toast } from "@/lib/toast"
@@ -96,6 +98,9 @@ interface CatalogueContextValue {
   closeSkuDetail: () => void
   updateSku: (skuId: string, patch: Partial<CategorySku>) => void
   bulkUpdateSkus: (skuIds: string[], patch: Partial<CategorySku>) => void
+  bulkAddCategoriesToSkus: (skuIds: string[], categoryIds: string[]) => void
+  bulkAddPlatformsToSkus: (skuIds: string[], platforms: string[]) => void
+  bulkAddStoresToSkus: (skuIds: string[], storeIds: string[]) => void
   deleteSku: (skuId: string) => void
   addProductOpen: boolean
   addProductCategoryId: string | null
@@ -362,6 +367,64 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     clearSelection()
     toast(`Updated ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`)
     logActivity(`Bulk edited ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`, "edit")
+  }
+
+  // Pins every selected SKU into every given category, additively — keeps whatever
+  // categories each SKU was already in (unlike "Move to", which re-pins exclusively).
+  const bulkAddCategoriesToSkus = (skuIds: string[], categoryIds: string[]) => {
+    if (categoryIds.length === 0) return
+    const destIdSet = new Set(categoryIds)
+    setCategories((prev) => {
+      const skusById = new Map(prev.flatMap((c) => c.skus).map((s) => [s.id, s]))
+      return prev.map((c) => {
+        if (!destIdSet.has(c.id)) return c
+        const alreadyIn = new Set(c.skus.map((s) => s.id))
+        const toAdd = skuIds.filter((id) => !alreadyIn.has(id) && skusById.has(id)).map((id) => skusById.get(id)!)
+        if (toAdd.length === 0) return c
+        return { ...c, itemCount: c.itemCount + toAdd.length, skus: [...c.skus, ...toAdd] }
+      })
+    })
+    toast(`Pinned ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`, {
+      description: `Into ${categoryIds.length} categor${categoryIds.length === 1 ? "y" : "ies"}`,
+    })
+  }
+
+  // Unions each selected SKU's own platform/darkStore lists with the given additions —
+  // per-SKU, since every SKU can already carry a different set.
+  const bulkAddPlatformsToSkus = (skuIds: string[], platforms: string[]) => {
+    if (platforms.length === 0) return
+    const idSet = new Set(skuIds)
+    setCategories((prev) =>
+      prev.map((c) => ({
+        ...c,
+        skus: c.skus.map((s) =>
+          idSet.has(s.id) ? { ...s, platforms: [...new Set([...s.platforms, ...platforms])] } : s
+        ),
+      }))
+    )
+    toast(`Updated ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`, { description: "Platforms added" })
+  }
+
+  const bulkAddStoresToSkus = (skuIds: string[], storeIds: string[]) => {
+    if (storeIds.length === 0) return
+    const idSet = new Set(skuIds)
+    setCategories((prev) =>
+      prev.map((c) => ({
+        ...c,
+        skus: c.skus.map((s) => {
+          if (!idSet.has(s.id)) return s
+          const nextIds = [...new Set([...s.stockedStoreIds, ...storeIds])]
+          return {
+            ...s,
+            stockedStoreIds: nextIds,
+            darkStoreAvailability: computeDarkStoreAvailability(nextIds),
+            stores: nextIds.length,
+            darkStores: `${nextIds.length}/${darkStoreLocations.length}`,
+          }
+        }),
+      }))
+    )
+    toast(`Updated ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`, { description: "Dark stores added" })
   }
 
   const deleteSku = (skuId: string) => {
@@ -804,6 +867,9 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     closeSkuDetail,
     updateSku,
     bulkUpdateSkus,
+    bulkAddCategoriesToSkus,
+    bulkAddPlatformsToSkus,
+    bulkAddStoresToSkus,
     deleteSku,
     addProductOpen,
     addProductCategoryId,
