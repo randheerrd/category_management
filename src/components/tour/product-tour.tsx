@@ -3,8 +3,6 @@ import { Compass } from "lucide-react"
 
 import { TourGuide, type TourStep } from "@/lib/tour-guide"
 
-const TOUR_SEEN_KEY = "gc-catalogue-tour-seen"
-
 const steps: TourStep[] = [
   {
     target: null,
@@ -49,32 +47,17 @@ const steps: TourStep[] = [
 ]
 
 /**
- * Spotlight walkthrough for first-time visitors to the catalogue board.
- * Auto-starts once per browser (tracked in localStorage); always replayable via the Tour button.
+ * Spotlight walkthrough for the catalogue board. Always auto-starts as a first-time
+ * interaction on landing — no "seen it before" memory — and is always replayable via
+ * the Tour button.
  */
 export function ProductTour() {
   useEffect(() => {
-    const hasSeenTour = localStorage.getItem(TOUR_SEEN_KEY) === "1"
+    TourGuide.init({ steps, autoStart: false })
 
-    TourGuide.init({
-      steps,
-      autoStart: false,
-      onModeChange: (mode) => {
-        if (mode === "returning") {
-          try {
-            localStorage.setItem(TOUR_SEEN_KEY, "1")
-          } catch {
-            // localStorage can throw in private-browsing contexts — the tour still works, it just replays every visit.
-          }
-        }
-      },
-    })
-
-    if (!hasSeenTour) {
-      // Give layout (fonts, images, the collapsible health panel) a tick to settle before spotlighting.
-      const timer = setTimeout(() => TourGuide.start(), 400)
-      return () => clearTimeout(timer)
-    }
+    // Give layout (fonts, images, the collapsible health panel) a tick to settle before spotlighting.
+    const timer = setTimeout(() => TourGuide.start(), 400)
+    return () => clearTimeout(timer)
   }, [])
 
   return (

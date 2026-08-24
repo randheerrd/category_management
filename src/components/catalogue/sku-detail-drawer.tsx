@@ -1,12 +1,23 @@
 import { useEffect, useState } from "react"
-import { Trash2, X } from "lucide-react"
+import { ChevronDown, Trash2, X } from "lucide-react"
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type { StockStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { channelLogos } from "@/lib/channel-logos"
+
+/** Shared look for the two "select" triggers below — matches the old native <select>'s box. */
+const selectTriggerClasses =
+  "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 
 const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 
@@ -89,35 +100,52 @@ export function SkuDetailDrawer() {
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm text-muted-foreground">Status</span>
-              <select
-                value={stock}
-                onChange={(e) => setStock(e.target.value as StockStatus)}
-                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {stockOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <button type="button" className={selectTriggerClasses}>
+                      <span>{stock}</span>
+                      <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                    </button>
+                  }
+                />
+                <DropdownMenuContent align="start">
+                  <DropdownMenuRadioGroup value={stock} onValueChange={(value) => setStock(value as StockStatus)}>
+                    {stockOptions.map((option) => (
+                      <DropdownMenuRadioItem key={option} value={option}>
+                        {option}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </label>
           </div>
 
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">Pinned in</p>
             <div className="flex items-center gap-2">
-              <select
-                value={pinTarget}
-                onChange={(e) => setPinTarget(e.target.value)}
-                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <option value="">Category</option>
-                {otherCategories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </select>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <button type="button" className={selectTriggerClasses}>
+                      <span className={pinTarget ? "" : "text-muted-foreground"}>
+                        {otherCategories.find((c) => c.id === pinTarget)?.title ?? "Category"}
+                      </span>
+                      <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                    </button>
+                  }
+                />
+                <DropdownMenuContent align="start">
+                  <DropdownMenuRadioGroup value={pinTarget} onValueChange={setPinTarget}>
+                    {otherCategories.map((c) => (
+                      <DropdownMenuRadioItem key={c.id} value={c.id}>
+                        {c.title}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="secondary" onClick={handlePinHere} disabled={!pinTarget} className="shrink-0">
                 Pin Here
               </Button>

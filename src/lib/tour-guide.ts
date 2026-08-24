@@ -105,6 +105,9 @@ function renderStep() {
     const cardLeft = Math.min(Math.max(16, r.left), Math.max(16, window.innerWidth - cardW - 16))
     cardStyle = `top:${cardTop}px; left:${cardLeft}px;`
   } else {
+    // No target (intro/outro steps) still gets the same dark backdrop as every
+    // other step — just without a cutout — so the modal reads consistently.
+    spotlightHTML = `<div class="tg-backdrop"></div>`
     cardStyle = `top:50%; left:50%; transform:translate(-50%,-50%);`
   }
 

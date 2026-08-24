@@ -5,11 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { StockStatus } from "@/lib/catalogue-data"
-import { channelCoverage } from "@/lib/catalogue-data"
+import { channelNames } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
-const platformOptions = channelCoverage.map((c) => c.name)
+const platformOptions = channelNames
 
 /** Centered "Add a product" form — creates a SKU and pins it into one or more categories. */
 export function AddProductDialog() {

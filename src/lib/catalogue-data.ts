@@ -44,26 +44,28 @@ export function skuCoverageLevel(sku: CategorySku): Exclude<CoverageLevel, "any"
 
 export interface SkuFilters {
   stockStatusFilter: Set<StockStatus>
-  platformFilter: string | null
-  darkStoreFilter: string | null
+  platformFilter: Set<string>
+  darkStoreFilter: Set<string>
   coverageFilter: CoverageLevel
   priceMin: number | null
-  grammageFilter: number | null
+  priceMax: number | null
+  grammageFilter: Set<number>
 }
 
 /** SKU-level half of the Filters drawer — category/status live on the category, so those are checked separately. */
 export function skuMatchesFilters(sku: CategorySku, filters: SkuFilters): boolean {
   if (filters.stockStatusFilter.size > 0 && !filters.stockStatusFilter.has(sku.stock)) return false
-  if (filters.platformFilter && sku.platform !== filters.platformFilter) return false
+  if (filters.platformFilter.size > 0 && !filters.platformFilter.has(sku.platform)) return false
   if (
-    filters.darkStoreFilter &&
-    !sku.darkStoreAvailability.some((store) => store.name === filters.darkStoreFilter && store.filled > 0)
+    filters.darkStoreFilter.size > 0 &&
+    !sku.darkStoreAvailability.some((store) => filters.darkStoreFilter.has(store.name) && store.filled > 0)
   ) {
     return false
   }
   if (filters.coverageFilter !== "any" && skuCoverageLevel(sku) !== filters.coverageFilter) return false
   if (filters.priceMin != null && sku.price < filters.priceMin) return false
-  if (filters.grammageFilter != null && sku.weightGrams !== filters.grammageFilter) return false
+  if (filters.priceMax != null && sku.price > filters.priceMax) return false
+  if (filters.grammageFilter.size > 0 && !filters.grammageFilter.has(sku.weightGrams)) return false
   return true
 }
 
@@ -79,15 +81,11 @@ export interface Category {
   skus: CategorySku[]
 }
 
-export const channelCoverage = [
-  { name: "Amazon Now", value: 88 },
-  { name: "Blinkit", value: 91 },
-  { name: "BigBasket", value: 76 },
-  { name: "Instamart", value: 69 },
-  { name: "Zepto", value: 58 },
-]
+/** The known quick-commerce channels — used to seed platform/dark-store options and to
+ *  compute real per-channel coverage below. Values live on each SKU's darkStoreAvailability. */
+export const channelNames = ["Amazon Now", "Blinkit", "BigBasket", "Instamart", "Zepto"]
 
-const platformCycle = channelCoverage.map((channel) => channel.name)
+const platformCycle = channelNames
 const stockCycle: StockStatus[] = ["In Stock", "In Stock", "Low Stock", "Out of Stock"]
 
 let skuSeq = 0
@@ -159,8 +157,132 @@ export const initialCategories: Category[] = [
   { id: "cat-11", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
 ]
 
-export const statusRows = [
-  { label: "45 SKUs Live", helper: "Ready across all channel", value: "90%" },
-  { label: "3 Need attention", helper: "Missing coverage or details", value: "6%" },
-  { label: "2 in draft", helper: "Not Yet Published", value: "4%" },
-]
+/** One thing on the board that needs a look — either a category or a specific SKU. The
+ *  single source of truth behind the "N items need attention" badge, the Quick Tip, the
+ *  Review Issues dialog, and Full Report's issue list, so all four always agree. */
+export interface HealthIssue {
+  id: string
+  type: "category" | "sku"
+  label: string
+  helper: string
+  categoryId?: string
+  skuId?: string
+}
+
+export function computeCatalogueIssues(categories: Category[]): HealthIssue[] {
+  const issues: HealthIssue[] = []
+
+  for (const category of categories) {
+    if (category.status === "Planning") {
+      issues.push({
+        id: `cat-issue-${category.id}`,
+        type: "category",
+        label: category.title,
+        helper: "Planning stage",
+        categoryId: category.id,
+      })
+    } else if (category.skus.length < category.itemCount) {
+      issues.push({
+        id: `cat-issue-${category.id}`,
+        type: "category",
+        label: category.title,
+        helper: `${category.skus.length}/${category.itemCount} SKUs pinned`,
+        categoryId: category.id,
+      })
+    }
+
+    for (const sku of category.skus) {
+      if (sku.stock === "Out of Stock") {
+        issues.push({
+          id: `sku-issue-${sku.id}-stock`,
+          type: "sku",
+          label: sku.name,
+          helper: "Out of stock",
+          categoryId: category.id,
+          skuId: sku.id,
+        })
+      } else if (skuCoverageLevel(sku) !== "full") {
+        issues.push({
+          id: `sku-issue-${sku.id}-coverage`,
+          type: "sku",
+          label: sku.name,
+          helper: skuCoverageLevel(sku) === "none" ? "No coverage" : "Partial coverage",
+          categoryId: category.id,
+          skuId: sku.id,
+        })
+      }
+    }
+  }
+
+  return issues
+}
+
+/** Every pinned SKU falls into exactly one bucket (checked in this order), so the three
+ *  rows always sum to the total SKU count. */
+export function computeStatusBreakdown(categories: Category[]) {
+  let draft = 0
+  let live = 0
+  let needsAttention = 0
+
+  for (const category of categories) {
+    for (const sku of category.skus) {
+      if (category.status === "Planning") draft += 1
+      else if (sku.stock === "In Stock" && skuCoverageLevel(sku) === "full") live += 1
+      else needsAttention += 1
+    }
+  }
+
+  const total = draft + live + needsAttention
+  const pct = (count: number) => (total === 0 ? "0%" : `${Math.round((count / total) * 100)}%`)
+
+  return [
+    { label: `${live} SKUs Live`, helper: "Ready across all channels", value: pct(live) },
+    { label: `${needsAttention} Need attention`, helper: "Missing coverage or details", value: pct(needsAttention) },
+    { label: `${draft} in draft`, helper: "Not Yet Published", value: pct(draft) },
+  ]
+}
+
+/** Sums filled/total across every visible SKU's darkStoreAvailability, per channel. */
+export function computeChannelCoverage(categories: Category[]) {
+  const totals = new Map<string, { filled: number; total: number }>()
+  for (const name of channelNames) totals.set(name, { filled: 0, total: 0 })
+
+  for (const category of categories) {
+    for (const sku of category.skus) {
+      for (const store of sku.darkStoreAvailability) {
+        const entry = totals.get(store.name)
+        if (!entry) continue
+        entry.filled += store.filled
+        entry.total += store.total
+      }
+    }
+  }
+
+  return channelNames.map((name) => {
+    const entry = totals.get(name)!
+    const value = entry.total === 0 ? 0 : Math.round((entry.filled / entry.total) * 100)
+    return { name, value }
+  })
+}
+
+/** Equal-weighted average of stock health, category readiness, and channel coverage —
+ *  the one place to retune weighting if the formula needs to change later. */
+export function computeHealthScore(categories: Category[]): number {
+  const allSkus = categories.flatMap((c) => c.skus)
+  const stockHealth =
+    allSkus.length === 0
+      ? 100
+      : ((allSkus.filter((s) => s.stock === "In Stock").length +
+          0.5 * allSkus.filter((s) => s.stock === "Low Stock").length) /
+          allSkus.length) *
+        100
+
+  const readyCategories = categories.filter((c) => c.status === "Active" && c.skus.length >= c.itemCount).length
+  const categoryReadiness = categories.length === 0 ? 100 : (readyCategories / categories.length) * 100
+
+  const coverageValues = computeChannelCoverage(categories).map((c) => c.value)
+  const channelCoverageScore =
+    coverageValues.length === 0 ? 100 : coverageValues.reduce((sum, v) => sum + v, 0) / coverageValues.length
+
+  return Math.round((stockHealth + categoryReadiness + channelCoverageScore) / 3)
+}

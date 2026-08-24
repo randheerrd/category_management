@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type DragEvent } from "react"
-import { UploadCloud, FileSpreadsheet, X, CheckCircle2, AlertTriangle, Download } from "lucide-react"
+import { UploadCloud, FileSpreadsheet, X, CheckCircle2, AlertTriangle } from "lucide-react"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { parseCatalogueCsv, CSV_TEMPLATE, type CsvRowError } from "@/lib/csv"
+import { parseCatalogueCsv, type CsvRowError } from "@/lib/csv"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 type Step = "idle" | "uploading" | "success" | "error"
@@ -20,18 +20,6 @@ interface ImportSummary {
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   return `${(bytes / 1024).toFixed(1)} KB`
-}
-
-function downloadTemplate() {
-  const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8;" })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = "catalogue-import-template.csv"
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
 }
 
 /**
@@ -127,8 +115,8 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
 
   return (
     <Dialog open={uploadCsvOpen} onOpenChange={(open) => !open && closeUploadCsv()}>
-      <DialogContent className="sm:max-w-[440px]" showCloseButton>
-        <DialogHeader className="-mx-4 -mt-4 border-b border-border px-4 pt-4 pb-3">
+      <DialogContent className="rounded-[8px] sm:max-w-[480px]" showCloseButton>
+        <DialogHeader>
           <DialogTitle>Upload CSV</DialogTitle>
           <DialogDescription>Bulk-import SKUs into your catalogue from a spreadsheet.</DialogDescription>
         </DialogHeader>
@@ -177,15 +165,6 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
                 </button>
               </div>
             )}
-
-            <button
-              type="button"
-              onClick={downloadTemplate}
-              className="flex w-fit items-center gap-1.5 text-sm font-medium text-foreground hover:underline"
-            >
-              <Download className="size-3.5" />
-              Download sample template
-            </button>
           </div>
         )}
 
@@ -249,7 +228,7 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
           </div>
         )}
 
-        <div className="-mx-4 -mb-4 flex items-center justify-end gap-2 rounded-b-xl border-t border-border bg-muted/50 p-4">
+        <div className="mt-2 flex items-center justify-end gap-2">
           {step === "idle" && (
             <>
               <Button variant="outline" onClick={closeUploadCsv}>

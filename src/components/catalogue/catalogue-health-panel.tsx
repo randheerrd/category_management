@@ -1,31 +1,77 @@
 import { useState } from "react"
-import { PanelLeftClose, ArrowRight } from "lucide-react"
+import { PanelLeft, ArrowRight } from "lucide-react"
 
 import { ScoreRing } from "@/components/catalogue/score-ring"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { channelCoverage, statusRows } from "@/lib/catalogue-data"
+import {
+  computeCatalogueIssues,
+  computeChannelCoverage,
+  computeHealthScore,
+  computeStatusBreakdown,
+} from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { channelLogos } from "@/lib/channel-logos"
 
-/** Left rail summarizing overall catalogue health. */
+/** Score-threshold label — the only place this wording is decided. */
+function scoreLabel(score: number) {
+  if (score >= 80) return "Looking Good"
+  if (score >= 60) return "Needs Improvement"
+  return "Needs Attention"
+}
+
+/** Left rail summarizing overall catalogue health — collapses to a thin icon strip. */
 export function CatalogueHealthPanel() {
-  const { categories, setSearch, toggleAnalyticsPanel } = useCatalogue()
+  const { categories, setSearch, openSkuDetail, showAnalyticsPanel, toggleAnalyticsPanel } = useCatalogue()
   const [reportOpen, setReportOpen] = useState(false)
   const [issuesOpen, setIssuesOpen] = useState(false)
 
-  const needsAttention = categories.filter((c) => c.status === "Planning" || c.skus.length < c.itemCount)
+  const score = computeHealthScore(categories)
+  const statusRows = computeStatusBreakdown(categories)
+  const channelCoverage = computeChannelCoverage(categories)
+  const issues = computeCatalogueIssues(categories)
+
+  const allSkus = categories.flatMap((c) => c.skus)
+  const stockCounts = {
+    "In Stock": allSkus.filter((s) => s.stock === "In Stock").length,
+    "Low Stock": allSkus.filter((s) => s.stock === "Low Stock").length,
+    "Out of Stock": allSkus.filter((s) => s.stock === "Out of Stock").length,
+  }
+
+  const openIssue = (issue: (typeof issues)[number]) => {
+    if (issue.type === "sku" && issue.skuId) openSkuDetail(issue.skuId)
+    else setSearch(issue.label)
+    setIssuesOpen(false)
+    setReportOpen(false)
+  }
+
+  if (!showAnalyticsPanel) {
+    return (
+      <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-border">
+        <div className="flex h-12 w-full shrink-0 items-center justify-center border-b border-border">
+          <button
+            type="button"
+            onClick={toggleAnalyticsPanel}
+            aria-label="Expand catalogue health panel"
+            className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted"
+          >
+            <PanelLeft className="size-4" />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div id="tour-health-panel" className="flex h-full w-[400px] shrink-0 flex-col border-r border-border">
+    <div id="tour-health-panel" className="flex h-full w-[360px] shrink-0 flex-col border-r border-border">
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <p className="text-base leading-6 font-semibold text-foreground">Catalogue Health</p>
         <button
           type="button"
           onClick={toggleAnalyticsPanel}
-          aria-label="Hide catalogue health panel"
-          className="flex size-4 items-center justify-center text-foreground"
+          aria-label="Collapse catalogue health panel"
+          className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted"
         >
-          <PanelLeftClose className="size-4" />
+          <PanelLeft className="size-4" />
         </button>
       </div>
 
@@ -33,10 +79,12 @@ export function CatalogueHealthPanel() {
         <div className="flex flex-col items-start gap-6">
           {/* Score + status */}
           <div className="flex w-full flex-col items-center gap-3">
-            <ScoreRing score={82} />
+            <ScoreRing score={score} />
             <div className="flex w-full flex-col items-center text-center">
-              <p className="w-full text-base leading-6 font-semibold text-foreground">Looking Good</p>
-              <p className="w-full text-sm leading-5 text-amber-600">3 Items need your attention</p>
+              <p className="w-full text-base leading-6 font-semibold text-foreground">{scoreLabel(score)}</p>
+              <p className="w-full text-sm leading-5 text-amber-600">
+                {issues.length} Item{issues.length === 1 ? "" : "s"} need your attention
+              </p>
             </div>
 
             <div className="flex w-full flex-col items-start overflow-hidden rounded-sm border border-border">
@@ -93,15 +141,14 @@ export function CatalogueHealthPanel() {
         </div>
 
         {/* Quick tip */}
-        <div className="flex w-full flex-col items-start gap-1.5 rounded-[10px] border border-[rgba(241,245,249,0.4)] bg-[rgba(241,245,249,0.5)] p-4">
-          <div className="flex w-full flex-col items-start gap-1 text-foreground">
-            <p className="w-full text-base leading-none font-medium">Quick Tip</p>
-            <p className="w-full text-sm leading-6">3 SKUs have coverage gaps. Review them before the next sync</p>
-          </div>
+        <div className="flex w-full flex-col items-start gap-3 rounded-[10px] border border-amber-600/15 bg-amber-50 p-3">
+          <p className="w-full text-sm leading-5 text-amber-800">
+            {issues.length} item{issues.length === 1 ? "" : "s"} need attention. Review them before the next sync
+          </p>
           <button
             type="button"
             onClick={() => setIssuesOpen(true)}
-            className="flex items-center gap-1 rounded-lg py-1 text-sm leading-6 font-medium text-foreground hover:underline"
+            className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm leading-5 font-medium text-foreground hover:bg-muted"
           >
             Review Issues
             <ArrowRight className="size-4" />
@@ -115,25 +162,91 @@ export function CatalogueHealthPanel() {
             <DialogTitle>Catalogue health — full report</DialogTitle>
             <DialogDescription>Live snapshot across all pinned categories and channels.</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <span className="text-muted-foreground">Categories on the board</span>
-              <span className="font-medium text-foreground">{categories.length}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <span className="text-muted-foreground">Active categories</span>
-              <span className="font-medium text-foreground">{categories.filter((c) => c.status === "Active").length}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <span className="text-muted-foreground">Total SKUs pinned</span>
-              <span className="font-medium text-foreground">{categories.reduce((sum, c) => sum + c.skus.length, 0)}</span>
-            </div>
-            {channelCoverage.map((channel) => (
-              <div key={channel.name} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                <span className="text-muted-foreground">{channel.name}</span>
-                <span className="font-medium text-foreground">{channel.value}%</span>
+          <div className="flex flex-col gap-4 text-sm">
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase">Overview</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-muted-foreground">Categories</span>
+                  <span className="font-medium text-foreground">{categories.length}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-muted-foreground">Active</span>
+                  <span className="font-medium text-foreground">
+                    {categories.filter((c) => c.status === "Active").length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-muted-foreground">Planning</span>
+                  <span className="font-medium text-foreground">
+                    {categories.filter((c) => c.status === "Planning").length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-muted-foreground">Discontinued</span>
+                  <span className="font-medium text-foreground">
+                    {categories.filter((c) => c.status === "Discontinued").length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-muted-foreground">Total SKUs</span>
+                  <span className="font-medium text-foreground">{allSkus.length}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-muted-foreground">In Stock</span>
+                  <span className="font-medium text-foreground">{stockCounts["In Stock"]}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-muted-foreground">Low Stock</span>
+                  <span className="font-medium text-foreground">{stockCounts["Low Stock"]}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-muted-foreground">Out of Stock</span>
+                  <span className="font-medium text-foreground">{stockCounts["Out of Stock"]}</span>
+                </div>
               </div>
-            ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase">Channel coverage</p>
+              <div className="flex flex-col gap-2">
+                {channelCoverage.map((channel) => (
+                  <div key={channel.name} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                    <span className="text-muted-foreground">{channel.name}</span>
+                    <span className="font-medium text-foreground">{channel.value}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {issues.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Top issues</p>
+                <div className="flex flex-col gap-1.5">
+                  {issues.slice(0, 5).map((issue) => (
+                    <button
+                      key={issue.id}
+                      onClick={() => openIssue(issue)}
+                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-left hover:bg-muted"
+                    >
+                      <span className="font-medium text-foreground">{issue.label}</span>
+                      <span className="text-muted-foreground">{issue.helper}</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportOpen(false)
+                    setIssuesOpen(true)
+                  }}
+                  className="flex w-fit items-center gap-1 text-sm font-medium text-foreground hover:underline"
+                >
+                  View all {issues.length}
+                  <ArrowRight className="size-4" />
+                </button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -141,28 +254,36 @@ export function CatalogueHealthPanel() {
       <Dialog open={issuesOpen} onOpenChange={setIssuesOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Categories that need attention</DialogTitle>
-            <DialogDescription>Planning-stage clusters or categories missing pinned SKUs.</DialogDescription>
+            <DialogTitle>Items that need attention</DialogTitle>
+            <DialogDescription>Planning-stage or understaffed categories, plus SKUs low on stock or coverage.</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-2">
-            {needsAttention.length === 0 ? (
+          <div className="flex flex-col gap-4">
+            {issues.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nothing needs attention right now.</p>
             ) : (
-              needsAttention.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => {
-                    setSearch(c.title)
-                    setIssuesOpen(false)
-                  }}
-                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-left text-sm hover:bg-muted"
-                >
-                  <span className="font-medium text-foreground">{c.title}</span>
-                  <span className="text-muted-foreground">
-                    {c.status === "Planning" ? "Planning" : `${c.skus.length}/${c.itemCount} SKUs pinned`}
-                  </span>
-                </button>
-              ))
+              (["category", "sku"] as const).map((type) => {
+                const group = issues.filter((issue) => issue.type === type)
+                if (group.length === 0) return null
+                return (
+                  <div key={type} className="flex flex-col gap-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      {type === "category" ? "Categories" : "SKUs"}
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {group.map((issue) => (
+                        <button
+                          key={issue.id}
+                          onClick={() => openIssue(issue)}
+                          className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-left text-sm hover:bg-muted"
+                        >
+                          <span className="font-medium text-foreground">{issue.label}</span>
+                          <span className="text-muted-foreground">{issue.helper}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
             )}
           </div>
         </DialogContent>

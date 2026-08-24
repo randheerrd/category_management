@@ -20,9 +20,10 @@ interface SkuRowProps {
 }
 
 /**
- * One SKU row on a category card. Dragging is gated to the grip handle (not the
- * whole row) so it doesn't fight with clicking the row to open details or clicking
- * the checkbox — the drag image still shows the full row via setDragImage.
+ * One SKU row on a category card. The whole row is a drag source (anywhere except the
+ * checkbox) — dragging still coexists with click-to-open-detail since a real drag
+ * suppresses the click, and with the checkbox click since that has its own stopPropagation
+ * plus an explicit draggable={false} to opt its subtree out of the row's drag.
  */
 function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: SkuRowProps) {
   const rowRef = useRef<HTMLDivElement>(null)
@@ -31,38 +32,56 @@ function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: S
     e.dataTransfer.setData("text/sku-id", sku.id)
     e.dataTransfer.setData("text/category-id", categoryId)
     e.dataTransfer.effectAllowed = "move"
-    if (rowRef.current) {
-      const rect = rowRef.current.getBoundingClientRect()
-      e.dataTransfer.setDragImage(rowRef.current, e.clientX - rect.left, e.clientY - rect.top)
+
+    // Don't hand the browser the live row node — it's a flex-1 child inside a
+    // responsive grid, and some environments snapshot the whole ancestor layout
+    // instead of just the row when the drag-image element is still in flow. A
+    // detached, explicitly-sized clone always yields a small, row-only ghost.
+    const source = rowRef.current
+    if (source) {
+      const rect = source.getBoundingClientRect()
+      const clone = source.cloneNode(true) as HTMLElement
+      clone.style.position = "fixed"
+      clone.style.top = "-9999px"
+      clone.style.left = "-9999px"
+      clone.style.width = `${rect.width}px`
+      clone.style.height = `${rect.height}px`
+      clone.style.margin = "0"
+      clone.style.pointerEvents = "none"
+      document.body.appendChild(clone)
+      e.dataTransfer.setDragImage(clone, e.clientX - rect.left, e.clientY - rect.top)
+      requestAnimationFrame(() => clone.remove())
     }
   }
 
   return (
     <div
       ref={rowRef}
+      draggable
+      onDragStart={handleDragStart}
       onClick={onOpenDetail}
-      className={`group/sku flex w-full cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-2 transition-colors ${
+      className={`group/sku flex w-full cursor-grab items-center gap-1.5 rounded-lg border px-2 py-2 select-none transition-colors active:cursor-grabbing ${
         selected
           ? "border-primary/30 bg-primary/5"
           : "border-slate-100 bg-[rgba(241,245,249,0.4)] hover:border-slate-200 hover:bg-[rgba(241,245,249,0.9)]"
       }`}
     >
-      <img src={sku.image} alt="" className="size-8 shrink-0 rounded-[3.667px] object-cover" />
+      <img src={sku.image} alt="" draggable={false} className="size-8 shrink-0 rounded-[3.667px] object-cover" />
       <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
         <p className="text-sm leading-5 font-medium text-foreground">{sku.name}</p>
         <p className="text-xs leading-4 text-muted-foreground">
           ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Stores
         </p>
       </div>
-      <span
-        draggable
-        onDragStart={handleDragStart}
-        onClick={(e) => e.stopPropagation()}
-        className="flex shrink-0 cursor-grab items-center opacity-0 transition-opacity group-hover/sku:opacity-100 active:cursor-grabbing"
-      >
+      <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/sku:opacity-100">
         <GripVertical className="size-3.5 text-muted-foreground/50" />
       </span>
-      <span onClick={(e) => e.stopPropagation()} className="flex shrink-0 items-center">
+      <span
+        draggable={false}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="flex shrink-0 items-center"
+      >
         <Checkbox checked={selected} onCheckedChange={onToggleSelected} />
       </span>
     </div>
@@ -79,8 +98,16 @@ export function CategoryCard({
   skus,
   anchorId,
 }: Category & { anchorId?: string }) {
-  const { collapsedIds, toggleCollapsed, openAddProduct, moveSku, openSkuDetail, selectedSkuIds, toggleSkuSelected } =
-    useCatalogue()
+  const {
+    collapsedIds,
+    toggleCollapsed,
+    openAddProduct,
+    openManageCategory,
+    moveSku,
+    openSkuDetail,
+    selectedSkuIds,
+    toggleSkuSelected,
+  } = useCatalogue()
   const collapsed = collapsedIds.has(id)
   const [dragOver, setDragOver] = useState(false)
 
@@ -107,47 +134,70 @@ export function CategoryCard({
         dragOver ? "border-primary/40 bg-primary/5" : "border-[rgba(241,245,249,0.4)]"
       }`}
     >
-      <div className="group/header flex flex-col items-start gap-2 p-1">
-        <button
-          type="button"
-          onClick={() => toggleCollapsed(id)}
-          className="flex w-full items-center justify-between gap-2 text-left"
+      <div className="group/header flex flex-col p-1">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => openManageCategory(id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") openManageCategory(id)
+          }}
+          className="-m-1 flex w-full cursor-pointer flex-col items-start gap-2 rounded-lg p-1 text-left transition-colors hover:bg-muted"
         >
-          <div className="flex w-full flex-col items-start gap-0.5">
-            <p className="w-full text-sm leading-5 font-semibold text-foreground">{title}</p>
-            <p className="w-full text-xs leading-4 text-muted-foreground">{description}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover/header:opacity-100">
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation()
-                openAddProduct(id)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
+          <div className="flex w-full items-center justify-between gap-2">
+            <div className="flex w-full flex-col items-start gap-0.5">
+              <p className="w-full text-sm leading-5 font-semibold text-foreground">{title}</p>
+              <p className="w-full text-xs leading-4 text-muted-foreground">{description}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover/header:opacity-100">
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
                   e.stopPropagation()
                   openAddProduct(id)
-                }
-              }}
-              className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              title="Add SKU"
-            >
-              <Plus className="size-3.5" />
-            </span>
-            <ChevronDown className={`size-3.5 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation()
+                    openAddProduct(id)
+                  }
+                }}
+                className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+                title="Add SKU"
+              >
+                <Plus className="size-3.5" />
+              </span>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleCollapsed(id)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation()
+                    toggleCollapsed(id)
+                  }
+                }}
+                className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+                title={collapsed ? "Expand" : "Collapse"}
+              >
+                <ChevronDown className={`size-3.5 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+              </span>
+            </div>
           </div>
-        </button>
-        <div className="flex items-start gap-2">
-          <span className="flex min-w-6 items-center justify-center rounded-md border-[0.5px] border-stone-500/10 bg-stone-500/5 px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap text-stone-800">
-            {itemCount} Items
-          </span>
-          <span
-            className={`flex min-w-6 items-center justify-center rounded-md border-[0.5px] px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap ${statusTagClasses[status]}`}
-          >
-            {status}
-          </span>
+          <div className="flex items-start gap-2">
+            <span className="flex min-w-6 items-center justify-center rounded-md border-[0.5px] border-stone-500/10 bg-stone-500/5 px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap text-stone-800">
+              {itemCount} Items
+            </span>
+            <span
+              className={`flex min-w-6 items-center justify-center rounded-md border-[0.5px] px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap ${statusTagClasses[status]}`}
+            >
+              {status}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -167,7 +217,7 @@ export function CategoryCard({
           </div>
         ) : (
           <div
-            className={`flex w-full flex-1 items-center justify-center rounded-lg border border-dashed p-4 text-center text-sm ${
+            className={`flex w-full items-center justify-center rounded-lg border border-dashed p-4 text-center text-sm ${
               dragOver ? "border-primary text-primary" : "border-border text-muted-foreground"
             }`}
           >

@@ -7,6 +7,8 @@ import { SelectionActionBar } from "@/components/catalogue/selection-action-bar"
 import { SkuDetailDrawer } from "@/components/catalogue/sku-detail-drawer"
 import { AddProductDialog } from "@/components/catalogue/add-product-dialog"
 import { AddCategoryDialog } from "@/components/catalogue/add-category-dialog"
+import { ManageCategoryDialog } from "@/components/catalogue/manage-category-dialog"
+import { Toaster } from "@/components/ui/toaster"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 /** The populated catalogue board — assumes a CatalogueProvider is mounted above it. */
@@ -21,9 +23,8 @@ export function CatalogueHealthPage() {
         <TopBar />
         <div className="flex min-h-0 flex-1">
           <div
-            aria-hidden={!showAnalyticsPanel}
             className={`shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out ${
-              showAnalyticsPanel ? "w-[400px]" : "w-0"
+              showAnalyticsPanel ? "w-[360px]" : "w-12"
             }`}
           >
             <CatalogueHealthPanel />
@@ -41,6 +42,8 @@ export function CatalogueHealthPage() {
       <SkuDetailDrawer />
       <AddProductDialog />
       <AddCategoryDialog />
+      <ManageCategoryDialog />
+      <Toaster />
     </div>
   )
 }

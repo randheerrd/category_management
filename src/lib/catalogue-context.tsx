@@ -14,6 +14,7 @@ import {
 } from "@/lib/catalogue-data"
 import { products } from "@/lib/products"
 import type { CsvRow } from "@/lib/csv"
+import { toast } from "@/lib/toast"
 
 export type BoardView = "grid" | "table"
 
@@ -25,32 +26,35 @@ interface CatalogueContextValue {
   toggleStatusFilter: (status: CategoryStatus) => void
   setStatusFilterAll: (next: Set<CategoryStatus>) => void
   clearFilters: () => void
-  categoryFilterId: string | null
-  setCategoryFilterId: (id: string | null) => void
+  categoryFilterIds: Set<string>
+  setCategoryFilterIds: (ids: Set<string>) => void
   stockStatusFilter: Set<StockStatus>
   toggleStockStatusFilter: (status: StockStatus) => void
   setStockStatusFilterAll: (next: Set<StockStatus>) => void
-  platformFilter: string | null
-  setPlatformFilter: (platform: string | null) => void
-  darkStoreFilter: string | null
-  setDarkStoreFilter: (store: string | null) => void
+  platformFilter: Set<string>
+  setPlatformFilterAll: (next: Set<string>) => void
+  darkStoreFilter: Set<string>
+  setDarkStoreFilterAll: (next: Set<string>) => void
   coverageFilter: CoverageLevel
   setCoverageFilter: (level: CoverageLevel) => void
   priceMin: number | null
   setPriceMin: (value: number | null) => void
-  grammageFilter: number | null
-  setGrammageFilter: (value: number | null) => void
+  priceMax: number | null
+  setPriceMax: (value: number | null) => void
+  grammageFilter: Set<number>
+  setGrammageFilterAll: (next: Set<number>) => void
   activeFilterCount: number
   totalSkuCount: number
   countMatchingSkus: (filters: {
-    categoryFilterId: string | null
+    categoryFilterIds: Set<string>
     statusFilter: Set<CategoryStatus>
     stockStatusFilter: Set<StockStatus>
-    platformFilter: string | null
-    darkStoreFilter: string | null
+    platformFilter: Set<string>
+    darkStoreFilter: Set<string>
     coverageFilter: CoverageLevel
     priceMin: number | null
-    grammageFilter: number | null
+    priceMax: number | null
+    grammageFilter: Set<number>
   }) => number
   view: BoardView
   setView: (view: BoardView) => void
@@ -89,6 +93,11 @@ interface CatalogueContextValue {
   openAddCategory: () => void
   closeAddCategory: () => void
   createCategory: (input: { title: string; description: string; status: CategoryStatus }) => void
+  manageCategoryId: string | null
+  openManageCategory: (categoryId: string) => void
+  closeManageCategory: () => void
+  updateCategory: (categoryId: string, patch: Partial<Pick<Category, "title" | "description" | "status">>) => void
+  deleteCategory: (categoryId: string) => void
   uploadCsvOpen: boolean
   openUploadCsv: () => void
   closeUploadCsv: () => void
@@ -101,13 +110,14 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>(initialCategories)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<Set<CategoryStatus>>(new Set())
-  const [categoryFilterId, setCategoryFilterId] = useState<string | null>(null)
+  const [categoryFilterIds, setCategoryFilterIds] = useState<Set<string>>(new Set())
   const [stockStatusFilter, setStockStatusFilter] = useState<Set<StockStatus>>(new Set())
-  const [platformFilter, setPlatformFilter] = useState<string | null>(null)
-  const [darkStoreFilter, setDarkStoreFilter] = useState<string | null>(null)
+  const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set())
+  const [darkStoreFilter, setDarkStoreFilter] = useState<Set<string>>(new Set())
   const [coverageFilter, setCoverageFilter] = useState<CoverageLevel>("any")
   const [priceMin, setPriceMin] = useState<number | null>(null)
-  const [grammageFilter, setGrammageFilter] = useState<number | null>(null)
+  const [priceMax, setPriceMax] = useState<number | null>(null)
+  const [grammageFilter, setGrammageFilter] = useState<Set<number>>(new Set())
   const [view, setViewState] = useState<BoardView>("grid")
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
   const [date, setDate] = useState<Date>(new Date(2026, 7, 12))
@@ -118,6 +128,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [addProductOpen, setAddProductOpen] = useState(false)
   const [addProductCategoryId, setAddProductCategoryId] = useState<string | null>(null)
   const [addCategoryOpen, setAddCategoryOpen] = useState(false)
+  const [manageCategoryId, setManageCategoryId] = useState<string | null>(null)
   const [uploadCsvOpen, setUploadCsvOpen] = useState(false)
 
   const openUploadCsv = () => setUploadCsvOpen(true)
@@ -164,6 +175,10 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       return next
     })
 
+    toast(`Imported ${rows.length} SKU${rows.length === 1 ? "" : "s"}`, {
+      description: `${createdTitles.size} categor${createdTitles.size === 1 ? "y" : "ies"} created, ${updatedTitles.size} updated.`,
+    })
+
     return { skusImported: rows.length, categoriesCreated: createdTitles.size, categoriesUpdated: updatedTitles.size }
   }
 
@@ -183,6 +198,54 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       },
     ])
     setAddCategoryOpen(false)
+    toast(`Created "${input.title}"`)
+  }
+
+  const openManageCategory = (categoryId: string) => setManageCategoryId(categoryId)
+  const closeManageCategory = () => setManageCategoryId(null)
+
+  const updateCategory = (categoryId: string, patch: Partial<Pick<Category, "title" | "description" | "status">>) => {
+    const existing = categories.find((c) => c.id === categoryId)
+    setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, ...patch } : c)))
+    setManageCategoryId(null)
+    if (existing) toast(`Saved "${patch.title ?? existing.title}"`)
+  }
+
+  // The deleted category's SKUs aren't discarded — they land in an "Unsorted" category,
+  // creating it on the fly the first time it's needed (never shown until then).
+  const UNSORTED_TITLE = "Unsorted"
+  const deleteCategory = (categoryId: string) => {
+    const target = categories.find((c) => c.id === categoryId)
+    if (!target) return
+
+    setCategories((prev) => {
+      const withoutTarget = prev.filter((c) => c.id !== categoryId)
+      if (target.skus.length === 0) return withoutTarget
+
+      const existingUnsorted = withoutTarget.find((c) => c.title === UNSORTED_TITLE)
+      if (existingUnsorted) {
+        return withoutTarget.map((c) =>
+          c.id === existingUnsorted.id
+            ? { ...c, itemCount: c.itemCount + target.skus.length, skus: [...c.skus, ...target.skus] }
+            : c
+        )
+      }
+      return [
+        ...withoutTarget,
+        {
+          id: `cat-unsorted-${Date.now()}`,
+          title: UNSORTED_TITLE,
+          description: "SKUs from deleted categories land here.",
+          itemCount: target.skus.length,
+          status: "Active",
+          skus: target.skus,
+        },
+      ]
+    })
+    setManageCategoryId(null)
+    toast.error(`Deleted "${target.title}"`, {
+      description: target.skus.length > 0 ? `${target.skus.length} SKU(s) moved to Unsorted.` : undefined,
+    })
   }
 
   const openAddProduct = (categoryId?: string) => {
@@ -199,6 +262,9 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       prev.map((c) => (categoryIds.includes(c.id) ? { ...c, itemCount: c.itemCount + 1, skus: [...c.skus, sku] } : c))
     )
     setAddProductOpen(false)
+    toast(`Added "${sku.name}"`, {
+      description: `Pinned to ${categoryIds.length} categor${categoryIds.length === 1 ? "y" : "ies"}.`,
+    })
   }
 
   const clearSelection = () => setSelectedSkuIds(new Set())
@@ -207,15 +273,18 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const closeSkuDetail = () => setSelectedSkuId(null)
 
   const updateSku = (skuId: string, patch: Partial<CategorySku>) => {
+    const sku = categories.flatMap((c) => c.skus).find((s) => s.id === skuId)
     setCategories((prev) =>
       prev.map((c) => ({
         ...c,
         skus: c.skus.map((s) => (s.id === skuId ? { ...s, ...patch } : s)),
       }))
     )
+    if (sku) toast(`Saved "${sku.name}"`)
   }
 
   const deleteSku = (skuId: string) => {
+    const sku = categories.flatMap((c) => c.skus).find((s) => s.id === skuId)
     setCategories((prev) =>
       prev.map((c) => {
         const kept = c.skus.filter((s) => s.id !== skuId)
@@ -224,6 +293,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       })
     )
     setSelectedSkuId((current) => (current === skuId ? null : current))
+    if (sku) toast.error(`Deleted "${sku.name}"`)
   }
 
   const setView = (next: BoardView) => {
@@ -255,13 +325,14 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
 
   const clearFilters = () => {
     setStatusFilter(new Set())
-    setCategoryFilterId(null)
+    setCategoryFilterIds(new Set())
     setStockStatusFilter(new Set())
-    setPlatformFilter(null)
-    setDarkStoreFilter(null)
+    setPlatformFilter(new Set())
+    setDarkStoreFilter(new Set())
     setCoverageFilter("any")
     setPriceMin(null)
-    setGrammageFilter(null)
+    setPriceMax(null)
+    setGrammageFilter(new Set())
   }
 
   const toggleStockStatusFilter = (status: StockStatus) => {
@@ -287,13 +358,11 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const allCollapsed = categories.length > 0 && collapsedIds.size === categories.length
 
   const addSku = (categoryId: string) => {
+    const sku = makeSku(products[Math.floor(Math.random() * products.length)])
     setCategories((prev) =>
-      prev.map((c) =>
-        c.id === categoryId
-          ? { ...c, itemCount: c.itemCount + 1, skus: [...c.skus, makeSku(products[Math.floor(Math.random() * products.length)])] }
-          : c
-      )
+      prev.map((c) => (c.id === categoryId ? { ...c, itemCount: c.itemCount + 1, skus: [...c.skus, sku] } : c))
     )
+    toast(`Added "${sku.name}"`)
   }
 
   const addCategory = () => {
@@ -308,15 +377,17 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
         skus: [],
       },
     ])
+    toast('Created "New category"')
   }
 
   const moveSku = (skuId: string, fromCategoryId: string, toCategoryId: string) => {
     if (fromCategoryId === toCategoryId) return
-    setCategories((prev) => {
-      const source = prev.find((c) => c.id === fromCategoryId)
-      const sku = source?.skus.find((s) => s.id === skuId)
-      if (!sku) return prev
-      return prev.map((c) => {
+    const source = categories.find((c) => c.id === fromCategoryId)
+    const sku = source?.skus.find((s) => s.id === skuId)
+    const destination = categories.find((c) => c.id === toCategoryId)
+    if (!sku) return
+    setCategories((prev) =>
+      prev.map((c) => {
         if (c.id === fromCategoryId) {
           return { ...c, itemCount: Math.max(0, c.itemCount - 1), skus: c.skus.filter((s) => s.id !== skuId) }
         }
@@ -325,12 +396,14 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
         }
         return c
       })
-    })
+    )
+    toast(`Moved "${sku.name}"`, { description: destination ? `To ${destination.title}` : undefined })
   }
 
   // "Move to" and "Add to Category" both resolve here — SKUs belong to a single
   // category in this data model, so both actions re-pin the SKU to the target.
   const bulkMoveToCategory = (skuIds: string[], toCategoryId: string) => {
+    const destination = categories.find((c) => c.id === toCategoryId)
     setCategories((prev) => {
       const idSet = new Set(skuIds)
       const moved: Category["skus"] = []
@@ -344,6 +417,9 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       )
     })
     clearSelection()
+    toast(`Moved ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`, {
+      description: destination ? `To ${destination.title}` : undefined,
+    })
   }
 
   const bulkRemoveFromCategory = (skuIds: string[]) => {
@@ -356,13 +432,19 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       })
     })
     clearSelection()
+    toast.error(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`)
   }
 
   const visibleCategories = useMemo(() => {
     const query = search.trim().toLowerCase()
     return categories
       .filter((category) => {
-        if (categoryFilterId && category.id !== categoryFilterId && category.title !== categoryFilterId) return false
+        if (
+          categoryFilterIds.size > 0 &&
+          !categoryFilterIds.has(category.id) &&
+          !categoryFilterIds.has(category.title)
+        )
+          return false
         if (statusFilter.size > 0 && !statusFilter.has(category.status)) return false
         if (!query) return true
         const matchesCategory =
@@ -379,6 +461,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
             darkStoreFilter,
             coverageFilter,
             priceMin,
+            priceMax,
             grammageFilter,
           })
         ),
@@ -387,41 +470,49 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     categories,
     search,
     statusFilter,
-    categoryFilterId,
+    categoryFilterIds,
     stockStatusFilter,
     platformFilter,
     darkStoreFilter,
     coverageFilter,
     priceMin,
+    priceMax,
     grammageFilter,
   ])
 
   const activeFilterCount =
     statusFilter.size +
-    (categoryFilterId ? 1 : 0) +
+    categoryFilterIds.size +
     stockStatusFilter.size +
-    (platformFilter ? 1 : 0) +
-    (darkStoreFilter ? 1 : 0) +
+    platformFilter.size +
+    darkStoreFilter.size +
     (coverageFilter !== "any" ? 1 : 0) +
     (priceMin != null ? 1 : 0) +
-    (grammageFilter != null ? 1 : 0)
+    (priceMax != null ? 1 : 0) +
+    grammageFilter.size
 
   const totalSkuCount = useMemo(() => categories.reduce((sum, c) => sum + c.skus.length, 0), [categories])
 
   // Lets the Filters drawer preview a live match count against a draft (not-yet-applied) filter combination.
   const countMatchingSkus = (filters: {
-    categoryFilterId: string | null
+    categoryFilterIds: Set<string>
     statusFilter: Set<CategoryStatus>
     stockStatusFilter: Set<StockStatus>
-    platformFilter: string | null
-    darkStoreFilter: string | null
+    platformFilter: Set<string>
+    darkStoreFilter: Set<string>
     coverageFilter: CoverageLevel
     priceMin: number | null
-    grammageFilter: number | null
+    priceMax: number | null
+    grammageFilter: Set<number>
   }) => {
     let count = 0
     for (const category of categories) {
-      if (filters.categoryFilterId && category.id !== filters.categoryFilterId && category.title !== filters.categoryFilterId) continue
+      if (
+        filters.categoryFilterIds.size > 0 &&
+        !filters.categoryFilterIds.has(category.id) &&
+        !filters.categoryFilterIds.has(category.title)
+      )
+        continue
       if (filters.statusFilter.size > 0 && !filters.statusFilter.has(category.status)) continue
       for (const sku of category.skus) {
         if (skuMatchesFilters(sku, filters)) count += 1
@@ -438,21 +529,23 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toggleStatusFilter,
     setStatusFilterAll: setStatusFilter,
     clearFilters,
-    categoryFilterId,
-    setCategoryFilterId,
+    categoryFilterIds,
+    setCategoryFilterIds,
     stockStatusFilter,
     toggleStockStatusFilter,
     setStockStatusFilterAll: setStockStatusFilter,
     platformFilter,
-    setPlatformFilter,
+    setPlatformFilterAll: setPlatformFilter,
     darkStoreFilter,
-    setDarkStoreFilter,
+    setDarkStoreFilterAll: setDarkStoreFilter,
     coverageFilter,
     setCoverageFilter,
     priceMin,
     setPriceMin,
+    priceMax,
+    setPriceMax,
     grammageFilter,
-    setGrammageFilter,
+    setGrammageFilterAll: setGrammageFilter,
     activeFilterCount,
     totalSkuCount,
     countMatchingSkus,
@@ -493,6 +586,11 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     openAddCategory,
     closeAddCategory,
     createCategory,
+    manageCategoryId,
+    openManageCategory,
+    closeManageCategory,
+    updateCategory,
+    deleteCategory,
     uploadCsvOpen,
     openUploadCsv,
     closeUploadCsv,

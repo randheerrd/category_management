@@ -83,6 +83,15 @@
     width 0.3s ease,
     height 0.3s ease;
 }
+/* Same dim backdrop as .tg-spotlight's cutout shadow, but full-bleed for the
+   no-target intro/outro steps so the modal opens over a consistent scrim. */
+.tg-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9985;
+  background: rgba(15, 23, 42, 0.55);
+  pointer-events: none;
+}
 .tg-card {
   position: fixed;
   z-index: 9986;

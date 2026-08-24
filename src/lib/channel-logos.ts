@@ -5,7 +5,7 @@ import instamart from "@/assets/channels/instamart.jpeg"
 import zepto from "@/assets/channels/zepto.webp"
 import flipkartMinutes from "@/assets/channels/flipkart-minutes.png"
 
-/** Real quick-commerce platform logos, keyed by the exact name used in `channelCoverage` / `sku.platform`. */
+/** Real quick-commerce platform logos, keyed by the exact name used in `channelNames` / `sku.platform`. */
 export const channelLogos: Record<string, string> = {
   "Amazon Now": amazonNow,
   Blinkit: blinkit,

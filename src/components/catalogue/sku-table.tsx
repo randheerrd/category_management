@@ -1,5 +1,5 @@
-import { Fragment, useMemo } from "react"
-import { CircleHelp, ChevronLeft, ChevronRight } from "lucide-react"
+import { Fragment, useMemo, useRef, useState, type DragEvent } from "react"
+import { CircleHelp, ChevronLeft, ChevronRight, ChevronDown, GripVertical } from "lucide-react"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -13,50 +13,26 @@ const stockDotClasses: Record<StockStatus, string> = {
   "Out of Stock": "text-destructive",
 }
 
-// Deterministic tag color per category name — no per-category color is stored anywhere,
-// so this hashes the name to pick a consistent swatch across renders. Matches the
-// ".tag-base" treatment used elsewhere (colored bg/border/text at low opacity).
-const categoryTagClasses = [
-  "border-emerald-600/10 bg-emerald-600/5 text-emerald-800",
-  "border-blue-600/10 bg-blue-600/5 text-blue-800",
-  "border-amber-600/10 bg-amber-600/5 text-amber-800",
-  "border-rose-600/10 bg-rose-600/5 text-rose-800",
-  "border-violet-600/10 bg-violet-600/5 text-violet-800",
-  "border-cyan-600/10 bg-cyan-600/5 text-cyan-800",
-  "border-orange-600/10 bg-orange-600/5 text-orange-800",
-  "border-teal-600/10 bg-teal-600/5 text-teal-800",
-]
-function categoryTagClass(name: string) {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
-  return categoryTagClasses[hash % categoryTagClasses.length]
-}
-
-function CategoryBadge({ name }: { name: string }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-md border-[0.5px] px-1.5 py-0.5 text-xs font-normal whitespace-nowrap ${categoryTagClass(name)}`}
-    >
-      {name}
-    </span>
-  )
-}
-
-/** Thin accent bar on the row's left edge — invisible at rest, appears on hover/selection. */
-const rowAccentClasses =
-  "relative before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary before:opacity-0 before:transition-opacity hover:before:opacity-30 data-[state=selected]:before:opacity-100"
-
 interface ProductRowData {
   sku: CategorySku
   skuIds: string[]
-  categories: string[]
   platforms: string[]
+  /** Only set for a grouped row (one SKU, one category) — that's the only case a drag has an
+   *  unambiguous single category to move *from*, so only grouped rows get the grip handle. */
+  categoryId?: string
 }
 
-function ProductRow({ row }: { row: ProductRowData }) {
+function ProductRow({ row, dragOver, onDragOverRow, onDragLeaveRow, onDropRow }: {
+  row: ProductRowData
+  dragOver: boolean
+  onDragOverRow: (e: DragEvent) => void
+  onDragLeaveRow: () => void
+  onDropRow: (e: DragEvent) => void
+}) {
   const { selectedSkuIds, setSelectedSkuIds, openSkuDetail } = useCatalogue()
-  const { sku, skuIds, categories, platforms } = row
+  const { sku, skuIds, platforms, categoryId } = row
   const selected = skuIds.every((id) => selectedSkuIds.has(id))
+  const rowRef = useRef<HTMLTableRowElement>(null)
 
   const toggleAll = () => {
     const next = new Set(selectedSkuIds)
@@ -65,35 +41,68 @@ function ProductRow({ row }: { row: ProductRowData }) {
     setSelectedSkuIds(next)
   }
 
+  const handleDragStart = (e: DragEvent) => {
+    if (!categoryId) return
+    e.dataTransfer.setData("text/sku-id", sku.id)
+    e.dataTransfer.setData("text/category-id", categoryId)
+    e.dataTransfer.effectAllowed = "move"
+
+    // Detached, explicitly-sized clone so the browser only ever snapshots the row itself —
+    // handing it the live in-flow row risks it grabbing the whole table as the drag image.
+    const source = rowRef.current
+    if (source) {
+      const rect = source.getBoundingClientRect()
+      const clone = source.cloneNode(true) as HTMLElement
+      clone.style.position = "fixed"
+      clone.style.top = "-9999px"
+      clone.style.left = "-9999px"
+      clone.style.width = `${rect.width}px`
+      clone.style.height = `${rect.height}px`
+      clone.style.display = "table"
+      clone.style.pointerEvents = "none"
+      document.body.appendChild(clone)
+      e.dataTransfer.setDragImage(clone, e.clientX - rect.left, e.clientY - rect.top)
+      requestAnimationFrame(() => clone.remove())
+    }
+  }
+
   return (
     <TableRow
+      ref={rowRef}
       data-state={selected ? "selected" : undefined}
       onClick={() => openSkuDetail(sku.id)}
-      className={`h-9 cursor-pointer font-normal [&>td]:h-9 [&>td]:py-0 ${rowAccentClasses}`}
+      onDragOver={categoryId ? onDragOverRow : undefined}
+      onDragLeave={categoryId ? onDragLeaveRow : undefined}
+      onDrop={categoryId ? onDropRow : undefined}
+      className={`group h-9 cursor-pointer font-normal [&>td]:h-9 [&>td]:py-0 ${dragOver ? "bg-primary/5" : ""}`}
     >
-      <TableCell className="w-12" onClick={(e) => e.stopPropagation()}>
-        <Checkbox checked={selected} onCheckedChange={toggleAll} />
+      <TableCell className="w-6 p-0" onClick={(e) => e.stopPropagation()}>
+        {categoryId && (
+          <div
+            draggable
+            onDragStart={handleDragStart}
+            className="flex size-9 cursor-grab items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+          >
+            <GripVertical className="size-3.5 text-muted-foreground/50" />
+          </div>
+        )}
       </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <img src={sku.image} alt="" className="size-5 shrink-0 rounded-[3px] object-cover" />
-          <span className="font-normal text-foreground">{sku.name}</span>
+      <TableCell className="w-9 p-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex size-9 items-center justify-center">
+          <Checkbox checked={selected} onCheckedChange={toggleAll} />
         </div>
       </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-1.5">
-          {categories.length > 0 ? (
-            categories.map((name) => <CategoryBadge key={name} name={name} />)
-          ) : (
-            <span className="text-muted-foreground">Unsorted</span>
-          )}
+      <TableCell className="overflow-hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <img src={sku.image} alt="" className="size-5 shrink-0 rounded-[3px] object-cover" />
+          <span className="truncate font-normal text-foreground">{sku.name}</span>
         </div>
       </TableCell>
       <TableCell className="font-normal text-muted-foreground">₹ {sku.mrp}</TableCell>
       <TableCell className="font-normal">₹ {sku.price}</TableCell>
       <TableCell className="font-normal">{sku.weightGrams}g</TableCell>
-      <TableCell>
-        <div className="flex items-center gap-1.5 font-normal text-foreground">
+      <TableCell className="overflow-hidden">
+        <div className="flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden font-normal text-foreground">
           {platforms.map((platform) => (
             <span key={platform} className="inline-flex items-center gap-1">
               {channelLogos[platform] ? (
@@ -119,15 +128,40 @@ function ProductRow({ row }: { row: ProductRowData }) {
   )
 }
 
-function CategoryGroupHeader({ category }: { category: Category }) {
+function CategoryGroupHeader({
+  category,
+  collapsed,
+  onToggle,
+  dragOver,
+  onDragOverRow,
+  onDragLeaveRow,
+  onDropRow,
+}: {
+  category: Category
+  collapsed: boolean
+  onToggle: () => void
+  dragOver: boolean
+  onDragOverRow: (e: DragEvent) => void
+  onDragLeaveRow: () => void
+  onDropRow: (e: DragEvent) => void
+}) {
   return (
-    <TableRow className="h-9 bg-slate-50 font-normal hover:bg-slate-50">
+    <TableRow
+      className={`h-9 cursor-pointer bg-slate-50 font-normal hover:bg-slate-100 ${dragOver ? "bg-primary/5" : ""}`}
+      onClick={onToggle}
+      onDragOver={onDragOverRow}
+      onDragLeave={onDragLeaveRow}
+      onDrop={onDropRow}
+    >
       <TableCell colSpan={9} className="py-2 text-sm font-normal">
-        <span className="text-muted-foreground">Category: </span>
-        <span className="font-normal text-foreground">{category.title}</span>{" "}
-        <span className="ml-1 inline-flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-normal text-primary-foreground">
-          {category.skus.length}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+          <span className="text-muted-foreground">Category: </span>
+          <span className="font-normal text-foreground">{category.title}</span>
+          <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-normal text-primary-foreground">
+            {category.skus.length}
+          </span>
+        </div>
       </TableCell>
     </TableRow>
   )
@@ -136,7 +170,34 @@ function CategoryGroupHeader({ category }: { category: Category }) {
 /** Flat, edge-to-edge table of every visible product — unique by product name, each row rolling
  *  up every category it's pinned in and every platform it's listed on. Optionally grouped by category. */
 export function SkuTable() {
-  const { visibleCategories, groupByCategory, selectedSkuIds, setSelectedSkuIds } = useCatalogue()
+  const { visibleCategories, groupByCategory, selectedSkuIds, setSelectedSkuIds, moveSku } = useCatalogue()
+  const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<string>>(new Set())
+  const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(null)
+
+  const toggleCategoryCollapsed = (categoryId: string) => {
+    setCollapsedCategoryIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(categoryId)) next.delete(categoryId)
+      else next.add(categoryId)
+      return next
+    })
+  }
+
+  const dragHandlersFor = (toCategoryId: string) => ({
+    dragOver: dragOverCategoryId === toCategoryId,
+    onDragOverRow: (e: DragEvent) => {
+      e.preventDefault()
+      setDragOverCategoryId(toCategoryId)
+    },
+    onDragLeaveRow: () => setDragOverCategoryId((prev) => (prev === toCategoryId ? null : prev)),
+    onDropRow: (e: DragEvent) => {
+      e.preventDefault()
+      setDragOverCategoryId(null)
+      const skuId = e.dataTransfer.getData("text/sku-id")
+      const fromCategoryId = e.dataTransfer.getData("text/category-id")
+      if (skuId && fromCategoryId) moveSku(skuId, fromCategoryId, toCategoryId)
+    },
+  })
 
   // Unique-by-name rollup: a product can be pinned into several categories and appear with a
   // different platform in each — this merges every instance sharing a name into one row.
@@ -147,13 +208,11 @@ export function SkuTable() {
         const existing = byName.get(sku.name)
         if (existing) {
           existing.skuIds.push(sku.id)
-          if (!existing.categories.includes(category.title)) existing.categories.push(category.title)
           if (!existing.platforms.includes(sku.platform)) existing.platforms.push(sku.platform)
         } else {
           byName.set(sku.name, {
             sku,
             skuIds: [sku.id],
-            categories: [category.title],
             platforms: [sku.platform],
           })
         }
@@ -172,18 +231,31 @@ export function SkuTable() {
 
   return (
     <div className="flex w-full flex-col border-t border-border bg-background">
-      <Table>
+      <Table className="table-fixed">
+        <colgroup>
+          <col className="w-6" />
+          <col className="w-9" />
+          <col className="w-[28%]" />
+          <col className="w-[9%]" />
+          <col className="w-[9%]" />
+          <col className="w-[10%]" />
+          <col className="w-[15%]" />
+          <col className="w-[14%]" />
+          <col className="w-[15%]" />
+        </colgroup>
         <TableHeader>
           <TableRow className="h-9 bg-[rgba(241,245,249,0.4)] font-normal hover:bg-[rgba(241,245,249,0.4)] [&>th]:h-9 [&>th]:py-0">
-            <TableHead className="w-12 font-normal">
-              <Checkbox
-                checked={allSelected}
-                indeterminate={!allSelected && someSelected}
-                onCheckedChange={toggleSelectAll}
-              />
+            <TableHead className="w-6 p-0" />
+            <TableHead className="w-9 p-0 font-normal">
+              <div className="flex size-9 items-center justify-center">
+                <Checkbox
+                  checked={allSelected}
+                  indeterminate={!allSelected && someSelected}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </div>
             </TableHead>
             <TableHead className="font-normal">Name</TableHead>
-            <TableHead className="font-normal">Categories</TableHead>
             <TableHead className="font-normal">MRP</TableHead>
             <TableHead className="font-normal">Price</TableHead>
             <TableHead className="font-normal">Grammage</TableHead>
@@ -201,24 +273,43 @@ export function SkuTable() {
             </TableRow>
           )}
           {groupByCategory
-            ? visibleCategories.map((category) =>
-                category.skus.length === 0 ? null : (
+            ? visibleCategories.map((category) => {
+                if (category.skus.length === 0) return null
+                const collapsed = collapsedCategoryIds.has(category.id)
+                const dragHandlers = dragHandlersFor(category.id)
+                return (
                   <Fragment key={category.id}>
-                    <CategoryGroupHeader category={category} />
-                    {category.skus.map((sku) => (
-                      <ProductRow
-                        key={sku.id}
-                        row={{ sku, skuIds: [sku.id], categories: [category.title], platforms: [sku.platform] }}
-                      />
-                    ))}
+                    <CategoryGroupHeader
+                      category={category}
+                      collapsed={collapsed}
+                      onToggle={() => toggleCategoryCollapsed(category.id)}
+                      {...dragHandlers}
+                    />
+                    {!collapsed &&
+                      category.skus.map((sku) => (
+                        <ProductRow
+                          key={sku.id}
+                          row={{ sku, skuIds: [sku.id], platforms: [sku.platform], categoryId: category.id }}
+                          {...dragHandlers}
+                        />
+                      ))}
                   </Fragment>
                 )
-              )
-            : productRows.map((row) => <ProductRow key={row.sku.name} row={row} />)}
+              })
+            : productRows.map((row) => (
+                <ProductRow
+                  key={row.sku.name}
+                  row={row}
+                  dragOver={false}
+                  onDragOverRow={() => {}}
+                  onDragLeaveRow={() => {}}
+                  onDropRow={() => {}}
+                />
+              ))}
         </TableBody>
       </Table>
 
-      <div className="flex h-11 w-full shrink-0 items-center justify-end gap-3 border-t border-border px-4 text-sm text-muted-foreground">
+      <div className="sticky bottom-0 z-10 flex h-11 w-full shrink-0 items-center justify-end gap-3 border-t border-border bg-background px-4 text-sm text-muted-foreground">
         <span>Showing all {groupByCategory ? visibleCategories.reduce((sum, c) => sum + c.skus.length, 0) : productRows.length} SKUs</span>
         <div className="flex items-center gap-1">
           <button type="button" disabled className="text-muted-foreground/50">

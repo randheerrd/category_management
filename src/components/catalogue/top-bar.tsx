@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useCatalogue } from "@/lib/catalogue-context"
-import { ProductTour } from "@/components/tour/product-tour"
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 
@@ -44,8 +43,6 @@ export function TopBar() {
             />
           </PopoverContent>
         </Popover>
-
-        <ProductTour />
 
         <div id="tour-create">
           <DropdownMenu>

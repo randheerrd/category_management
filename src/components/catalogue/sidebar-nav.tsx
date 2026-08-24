@@ -64,7 +64,7 @@ export function SidebarNav() {
       <div className="flex-1" />
 
       <div className="flex w-full flex-col items-center p-2">
-        <img src={avatarFooter} alt="User" className="size-8 rounded-lg object-cover" />
+        <img src={avatarFooter} alt="User" className="size-8 rounded-full object-cover" />
       </div>
     </div>
   )
