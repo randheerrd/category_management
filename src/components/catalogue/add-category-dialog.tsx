@@ -46,7 +46,7 @@ export function AddCategoryDialog() {
 
   return (
     <Dialog open={addCategoryOpen} onOpenChange={(open) => !open && closeAddCategory()}>
-      <DialogContent className="sm:max-w-[420px]" showCloseButton>
+      <DialogContent className="sm:max-w-[520px]" showCloseButton>
         <DialogHeader>
           <DialogTitle>New Category</DialogTitle>
         </DialogHeader>

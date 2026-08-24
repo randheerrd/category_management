@@ -115,7 +115,7 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
 
   return (
     <Dialog open={uploadCsvOpen} onOpenChange={(open) => !open && closeUploadCsv()}>
-      <DialogContent className="rounded-[8px] sm:max-w-[480px]" showCloseButton>
+      <DialogContent className="rounded-[8px] sm:max-w-[520px]" showCloseButton>
         <DialogHeader>
           <DialogTitle>Upload CSV</DialogTitle>
           <DialogDescription>Bulk-import SKUs into your catalogue from a spreadsheet.</DialogDescription>

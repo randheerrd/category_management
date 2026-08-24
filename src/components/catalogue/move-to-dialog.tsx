@@ -89,7 +89,7 @@ export function MoveToDialog({ open, onOpenChange, skuIds }: MoveToDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-[8px] sm:max-w-[420px]" showCloseButton={step === "pick"}>
+      <DialogContent className="rounded-[8px] sm:max-w-[520px]" showCloseButton={step === "pick"}>
         {step === "pick" ? (
           <>
             <DialogHeader>

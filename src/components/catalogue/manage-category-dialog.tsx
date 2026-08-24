@@ -46,7 +46,7 @@ export function ManageCategoryDialog() {
 
   return (
     <Dialog open={Boolean(manageCategoryId)} onOpenChange={(open) => !open && closeManageCategory()}>
-      <DialogContent className="sm:max-w-[420px]" showCloseButton>
+      <DialogContent className="sm:max-w-[520px]" showCloseButton>
         <DialogHeader className="-mx-4 -mt-4 border-b border-border px-4 pt-4 pb-3">
           <DialogTitle>Manage category</DialogTitle>
         </DialogHeader>
