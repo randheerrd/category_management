@@ -125,7 +125,7 @@ export function AddProductDialog({ onCreated }: AddProductDialogProps = {}) {
               <select
                 value={pinTarget}
                 onChange={(e) => setPinTarget(e.target.value)}
-                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="flex h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 <option value="">Category</option>
                 {availableCategories.map((c) => (
@@ -178,7 +178,7 @@ export function AddProductDialog({ onCreated }: AddProductDialogProps = {}) {
               <select
                 value={stock}
                 onChange={(e) => setStock(e.target.value as StockStatus)}
-                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="flex h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 {stockOptions.map((option) => (
                   <option key={option} value={option}>
@@ -194,7 +194,7 @@ export function AddProductDialog({ onCreated }: AddProductDialogProps = {}) {
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="flex h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <option value="">Select...</option>
               {platformOptions.map((option) => (

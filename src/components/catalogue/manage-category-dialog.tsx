@@ -74,7 +74,7 @@ export function ManageCategoryDialog() {
                   render={
                     <button
                       type="button"
-                      className="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     >
                       <span>{status}</span>
                       <ChevronDown className="size-4 shrink-0 text-muted-foreground" />

@@ -58,7 +58,7 @@ export function AddCategoryDialog() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as CategoryStatus)}
-                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="flex h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 {statusOptions.map((option) => (
                   <option key={option} value={option}>

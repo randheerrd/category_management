@@ -19,7 +19,7 @@ import { ConfirmDialog } from "@/components/catalogue/confirm-dialog"
 
 /** Shared look for the two "select" triggers below — matches the old native <select>'s box. */
 const selectTriggerClasses =
-  "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+  "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 
 const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 

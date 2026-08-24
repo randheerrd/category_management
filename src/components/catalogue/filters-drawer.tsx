@@ -25,7 +25,7 @@ const coverageLevels: { value: CoverageLevel; label: string }[] = [
 ]
 
 const selectTriggerClass =
-  "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+  "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 
 function toggleInSet<T>(set: Set<T>, value: T): Set<T> {
   const next = new Set(set)
@@ -341,7 +341,7 @@ export function FiltersDrawer() {
                     placeholder="Min"
                     value={draftPriceMin}
                     onChange={(e) => setDraftPriceMin(e.target.value)}
-                    className="h-9"
+                    className="h-8"
                   />
                 </label>
                 <label className="flex flex-col gap-1.5">
@@ -353,7 +353,7 @@ export function FiltersDrawer() {
                     placeholder="Max"
                     value={draftPriceMax}
                     onChange={(e) => setDraftPriceMax(e.target.value)}
-                    className="h-9"
+                    className="h-8"
                   />
                 </label>
               </div>
