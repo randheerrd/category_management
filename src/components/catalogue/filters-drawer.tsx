@@ -553,7 +553,7 @@ export function FiltersDrawer() {
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent showCloseButton className="sm:max-w-[400px]">
+        <SheetContent showCloseButton className="sm:max-w-[520px]">
           <SheetHeader className="pr-10">
             <SheetTitle>Filters</SheetTitle>
           </SheetHeader>

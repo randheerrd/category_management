@@ -435,7 +435,7 @@ export function CatalogueHealthPanel() {
       </Dialog>
 
       <Sheet open={activityOpen} onOpenChange={setActivityOpen}>
-        <SheetContent showCloseButton className="sm:max-w-[400px]">
+        <SheetContent showCloseButton className="sm:max-w-[520px]">
           <SheetHeader className="flex-col items-start gap-1 pr-10">
             <SheetTitle>Recent activity</SheetTitle>
           </SheetHeader>
