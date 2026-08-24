@@ -57,6 +57,7 @@ export function skuCoverageLevel(sku: CategorySku): Exclude<CoverageLevel, "any"
 }
 
 export interface SkuFilters {
+  productNameFilter: Set<string>
   stockStatusFilter: Set<StockStatus>
   platformFilter: Set<string>
   darkStoreFilter: Set<string>
@@ -68,6 +69,7 @@ export interface SkuFilters {
 
 /** SKU-level half of the Filters drawer — category/status live on the category, so those are checked separately. */
 export function skuMatchesFilters(sku: CategorySku, filters: SkuFilters): boolean {
+  if (filters.productNameFilter.size > 0 && !filters.productNameFilter.has(sku.name)) return false
   if (filters.stockStatusFilter.size > 0 && !filters.stockStatusFilter.has(sku.stock)) return false
   if (filters.platformFilter.size > 0 && !filters.platformFilter.has(sku.platform)) return false
   if (

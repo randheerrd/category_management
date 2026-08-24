@@ -194,6 +194,81 @@ function DarkStoreMultiSelect({
   )
 }
 
+/** Product (SKU name) picker — same search + multi-select interaction as Dark Store,
+ *  just flat (no grouping) since there's no natural category to bucket product names by. */
+function ProductMultiSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: Set<string>
+  onChange: (next: Set<string>) => void
+  options: string[]
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+
+  const trimmed = query.trim().toLowerCase()
+  const filtered = options.filter((name) => name.toLowerCase().includes(trimmed))
+
+  const selectedLabel = value.size === 0 ? "All products" : `${value.size} selected`
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setQuery("")
+      }}
+    >
+      <PopoverTrigger
+        render={
+          <button type="button" className={selectTriggerClass}>
+            <span className={value.size ? "" : "text-muted-foreground"}>{selectedLabel}</span>
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        }
+      />
+      <PopoverContent align="start" className="w-[352px] max-w-[calc(100vw-3rem)] p-2">
+        <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5">
+          <Search className="size-3.5 shrink-0 text-muted-foreground" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search products"
+            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+          />
+        </div>
+
+        <div className="flex max-h-72 flex-col overflow-y-auto">
+          {filtered.length === 0 ? (
+            <p className="px-2 py-3 text-center text-xs text-muted-foreground">No products match.</p>
+          ) : (
+            filtered.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => onChange(toggleInSet(value, name))}
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+              >
+                <span
+                  className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                    value.has(name) ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                  }`}
+                >
+                  {value.has(name) && <Check className="size-3" />}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-foreground">{name}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 /**
  * Right-side Filters sheet matching the Figma drawer. Field options come from the SKU table
  * (platform, dark store, category, stock, price, grammage) so every control actually filters
@@ -207,6 +282,8 @@ export function FiltersDrawer() {
     setCategoryFilterIds,
     statusFilter,
     setStatusFilterAll,
+    productNameFilter,
+    setProductNameFilterAll,
     stockStatusFilter,
     setStockStatusFilterAll,
     platformFilter,
@@ -226,6 +303,7 @@ export function FiltersDrawer() {
   const [open, setOpen] = useState(false)
   const [draftCategoryIds, setDraftCategoryIds] = useState<Set<string>>(new Set())
   const [draftStatus, setDraftStatus] = useState<Set<CategoryStatus>>(new Set())
+  const [draftProductNames, setDraftProductNames] = useState<Set<string>>(new Set())
   const [draftStock, setDraftStock] = useState<Set<StockStatus>>(new Set())
   const [draftPlatforms, setDraftPlatforms] = useState<Set<string>>(new Set())
   const [draftDarkStores, setDraftDarkStores] = useState<Set<string>>(new Set())
@@ -238,6 +316,11 @@ export function FiltersDrawer() {
     const fromTable = categories.flatMap((category) => category.skus.map((sku) => sku.platform))
     return [...new Set([...channelNames, ...fromTable])].filter(Boolean)
   }, [categories])
+
+  const productNames = useMemo(
+    () => [...new Set(categories.flatMap((category) => category.skus.map((sku) => sku.name)))].sort(),
+    [categories]
+  )
 
   const categoryOptions = useMemo(
     () => [...new Map(categories.map((category) => [category.title, category.id])).entries()],
@@ -254,6 +337,7 @@ export function FiltersDrawer() {
     if (!open) return
     setDraftCategoryIds(new Set(categoryFilterIds))
     setDraftStatus(new Set(statusFilter))
+    setDraftProductNames(new Set(productNameFilter))
     setDraftStock(new Set(stockStatusFilter))
     setDraftPlatforms(new Set(platformFilter))
     // darkStoreFilter is channel-level (that's the granularity the underlying coverage
@@ -268,6 +352,7 @@ export function FiltersDrawer() {
     open,
     categoryFilterIds,
     statusFilter,
+    productNameFilter,
     stockStatusFilter,
     platformFilter,
     darkStoreFilter,
@@ -285,6 +370,7 @@ export function FiltersDrawer() {
   const handleClearAll = () => {
     setDraftCategoryIds(new Set())
     setDraftStatus(new Set())
+    setDraftProductNames(new Set())
     setDraftStock(new Set())
     setDraftPlatforms(new Set())
     setDraftDarkStores(new Set())
@@ -297,6 +383,7 @@ export function FiltersDrawer() {
   const hasDraftFilters =
     draftCategoryIds.size > 0 ||
     draftStatus.size > 0 ||
+    draftProductNames.size > 0 ||
     draftStock.size > 0 ||
     draftPlatforms.size > 0 ||
     draftDarkStores.size > 0 ||
@@ -308,6 +395,7 @@ export function FiltersDrawer() {
   const handleApply = () => {
     setCategoryFilterIds(draftCategoryIds)
     setStatusFilterAll(draftStatus)
+    setProductNameFilterAll(draftProductNames)
     setStockStatusFilterAll(draftStock)
     setPlatformFilterAll(draftPlatforms)
     // Collapse the selected store ids back down to their parent channels — that's the
@@ -347,6 +435,11 @@ export function FiltersDrawer() {
           </SheetHeader>
 
           <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+            <label className="flex flex-col gap-1.5">
+              <SectionLabel>Products</SectionLabel>
+              <ProductMultiSelect value={draftProductNames} onChange={setDraftProductNames} options={productNames} />
+            </label>
+
             <label className="flex flex-col gap-1.5">
               <SectionLabel>Dark Store</SectionLabel>
               <DarkStoreMultiSelect value={draftDarkStores} onChange={setDraftDarkStores} />

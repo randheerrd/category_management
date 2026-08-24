@@ -32,6 +32,8 @@ interface CatalogueContextValue {
   clearFilters: () => void
   categoryFilterIds: Set<string>
   setCategoryFilterIds: (ids: Set<string>) => void
+  productNameFilter: Set<string>
+  setProductNameFilterAll: (next: Set<string>) => void
   stockStatusFilter: Set<StockStatus>
   toggleStockStatusFilter: (status: StockStatus) => void
   setStockStatusFilterAll: (next: Set<StockStatus>) => void
@@ -52,6 +54,7 @@ interface CatalogueContextValue {
   countMatchingSkus: (filters: {
     categoryFilterIds: Set<string>
     statusFilter: Set<CategoryStatus>
+    productNameFilter: Set<string>
     stockStatusFilter: Set<StockStatus>
     platformFilter: Set<string>
     darkStoreFilter: Set<string>
@@ -125,6 +128,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<Set<CategoryStatus>>(new Set())
   const [categoryFilterIds, setCategoryFilterIds] = useState<Set<string>>(new Set())
+  const [productNameFilter, setProductNameFilter] = useState<Set<string>>(new Set())
   const [stockStatusFilter, setStockStatusFilter] = useState<Set<StockStatus>>(new Set())
   const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set())
   const [darkStoreFilter, setDarkStoreFilter] = useState<Set<string>>(new Set())
@@ -389,6 +393,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const clearFilters = () => {
     setStatusFilter(new Set())
     setCategoryFilterIds(new Set())
+    setProductNameFilter(new Set())
     setStockStatusFilter(new Set())
     setPlatformFilter(new Set())
     setDarkStoreFilter(new Set())
@@ -638,6 +643,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
         ...category,
         skus: category.skus.filter((sku) =>
           skuMatchesFilters(sku, {
+            productNameFilter,
             stockStatusFilter,
             platformFilter,
             darkStoreFilter,
@@ -653,6 +659,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     search,
     statusFilter,
     categoryFilterIds,
+    productNameFilter,
     stockStatusFilter,
     platformFilter,
     darkStoreFilter,
@@ -665,6 +672,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const activeFilterCount =
     statusFilter.size +
     categoryFilterIds.size +
+    productNameFilter.size +
     stockStatusFilter.size +
     platformFilter.size +
     darkStoreFilter.size +
@@ -679,6 +687,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const countMatchingSkus = (filters: {
     categoryFilterIds: Set<string>
     statusFilter: Set<CategoryStatus>
+    productNameFilter: Set<string>
     stockStatusFilter: Set<StockStatus>
     platformFilter: Set<string>
     darkStoreFilter: Set<string>
@@ -713,6 +722,8 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     clearFilters,
     categoryFilterIds,
     setCategoryFilterIds,
+    productNameFilter,
+    setProductNameFilterAll: setProductNameFilter,
     stockStatusFilter,
     toggleStockStatusFilter,
     setStockStatusFilterAll: setStockStatusFilter,
