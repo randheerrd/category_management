@@ -17,6 +17,7 @@ import {
 
 import { ScoreRing } from "@/components/catalogue/score-ring"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   computeCatalogueIssues,
   computeChannelCoverage,
@@ -136,14 +137,21 @@ export function CatalogueHealthPanel() {
     return (
       <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-border">
         <div className="flex h-12 w-full shrink-0 items-center justify-center border-b border-border">
-          <button
-            type="button"
-            onClick={toggleAnalyticsPanel}
-            aria-label="Expand catalogue health panel"
-            className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted"
-          >
-            <PanelLeft className="size-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={toggleAnalyticsPanel}
+                  aria-label="Expand catalogue health panel"
+                  className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted"
+                >
+                  <PanelLeft className="size-4" />
+                </button>
+              }
+            />
+            <TooltipContent side="right">Expand panel (⌘.)</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     )
@@ -153,14 +161,21 @@ export function CatalogueHealthPanel() {
     <div id="tour-health-panel" className="flex h-full w-[360px] shrink-0 flex-col border-r border-border">
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <p className="text-base leading-6 font-semibold text-foreground">Catalogue Health</p>
-        <button
-          type="button"
-          onClick={toggleAnalyticsPanel}
-          aria-label="Collapse catalogue health panel"
-          className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted"
-        >
-          <PanelLeft className="size-4" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={toggleAnalyticsPanel}
+                aria-label="Collapse catalogue health panel"
+                className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted"
+              >
+                <PanelLeft className="size-4" />
+              </button>
+            }
+          />
+          <TooltipContent side="bottom">Hide panel (⌘.)</TooltipContent>
+        </Tooltip>
       </div>
 
       {!hasData ? (

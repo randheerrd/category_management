@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { StatusCombobox } from "@/components/catalogue/status-combobox"
+import { CategoryStatusTag } from "@/components/catalogue/category-status-tag"
 import {
   UNLISTED_CATEGORY_ID,
   channelNames,
@@ -30,16 +31,7 @@ const selectTriggerClasses =
 
 /** Right-side drawer for viewing and editing a single SKU. */
 export function SkuDetailDrawer() {
-  const {
-    categories,
-    selectedSkuId,
-    closeSkuDetail,
-    updateSku,
-    deleteSku,
-    pinSkuToCategory,
-    unpinSkuFromCategory,
-    createCategory,
-  } = useCatalogue()
+  const { categories, selectedSkuId, closeSkuDetail, saveSkuDetail, deleteSku, createCategory } = useCatalogue()
 
   const memberCategories = categories.filter((c) => c.skus.some((s) => s.id === selectedSkuId))
   const sku = memberCategories[0]?.skus.find((s) => s.id === selectedSkuId)
@@ -51,6 +43,11 @@ export function SkuDetailDrawer() {
   const [price, setPrice] = useState("")
   const [weightGrams, setWeightGrams] = useState("")
   const [stock, setStock] = useState<StockStatus>("In Stock")
+  // Everything below is edited locally and only applied to the catalogue on Save —
+  // no field, checkbox, or chip here writes through to context on its own.
+  const [platforms, setPlatforms] = useState<string[]>([])
+  const [stockedStoreIds, setStockedStoreIds] = useState<string[]>([])
+  const [pinnedCategoryIds, setPinnedCategoryIds] = useState<string[]>([])
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false)
@@ -69,38 +66,36 @@ export function SkuDetailDrawer() {
     setPrice(String(sku.price))
     setWeightGrams(String(sku.weightGrams))
     setStock(sku.stock)
-  }, [sku])
+    setPlatforms(sku.platforms)
+    setStockedStoreIds(sku.stockedStoreIds)
+    setPinnedCategoryIds(memberCategories.map((c) => c.id))
+    // Re-sync only when the drawer opens on a (possibly different) SKU — not on every
+    // categories update, or an in-progress edit would get clobbered by its own save.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSkuId])
 
   const handleFile = (file: File | undefined) => {
     if (!file || !/^image\/(jpeg|png)$/.test(file.type)) return
     setImage(URL.createObjectURL(file))
   }
 
-  // Once the just-created category shows up in context, pin the SKU into it —
-  // createCategory doesn't hand back an id, so match on the title we just submitted.
+  // Once the just-created category shows up in context, pin it locally (still pending
+  // until Save) — createCategory doesn't hand back an id, so match on the submitted title.
   useEffect(() => {
-    if (!pendingPinTitle || !sku) return
+    if (!pendingPinTitle) return
     const created = categories.find((c) => c.title === pendingPinTitle)
     if (!created) return
-    pinSkuToCategory(sku.id, created.id)
+    setPinnedCategoryIds((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]))
     setPendingPinTitle(null)
-  }, [categories, pendingPinTitle, sku, pinSkuToCategory])
+  }, [categories, pendingPinTitle])
 
   if (memberCategories.length === 0 || !sku) return null
 
-  const stockedStoreIdSet = new Set(sku.stockedStoreIds)
+  const stockedStoreIdSet = new Set(stockedStoreIds)
   const stockedLocations = darkStoreLocations.filter((store) => stockedStoreIdSet.has(store.id))
 
   const toggleStockedStore = (storeId: string) => {
-    const nextIds = stockedStoreIdSet.has(storeId)
-      ? sku.stockedStoreIds.filter((id) => id !== storeId)
-      : [...sku.stockedStoreIds, storeId]
-    updateSku(sku.id, {
-      stockedStoreIds: nextIds,
-      darkStoreAvailability: computeDarkStoreAvailability(nextIds),
-      stores: nextIds.length,
-      darkStores: `${nextIds.length}/${darkStoreLocations.length}`,
-    })
+    setStockedStoreIds((prev) => (stockedStoreIdSet.has(storeId) ? prev.filter((id) => id !== storeId) : [...prev, storeId]))
   }
 
   const trimmedStoreQuery = storeQuery.trim().toLowerCase()
@@ -109,18 +104,15 @@ export function SkuDetailDrawer() {
   )
   const storeCitiesInOrder = [...new Set(filteredStores.map((s) => s.city))]
 
-  const platformSet = new Set(sku.platforms)
+  const platformSet = new Set(platforms)
   const togglePlatform = (platform: string) => {
-    const next = platformSet.has(platform)
-      ? sku.platforms.filter((p) => p !== platform)
-      : [...sku.platforms, platform]
-    updateSku(sku.id, { platforms: next })
+    setPlatforms((prev) => (platformSet.has(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]))
   }
 
-  const memberCategoryIds = new Set(memberCategories.map((c) => c.id))
+  const pinnedCategoryIdSet = new Set(pinnedCategoryIds)
+  const pinnedCategories = categories.filter((c) => pinnedCategoryIdSet.has(c.id))
   const togglePin = (categoryId: string, pinned: boolean) => {
-    if (pinned) unpinSkuFromCategory(sku.id, categoryId)
-    else pinSkuToCategory(sku.id, categoryId)
+    setPinnedCategoryIds((prev) => (pinned ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]))
   }
 
   const trimmedCategoryQuery = categoryQuery.trim()
@@ -138,15 +130,24 @@ export function SkuDetailDrawer() {
   }
 
   const handleSave = () => {
-    updateSku(sku.id, {
-      name: name.trim() || sku.name,
-      description: description.trim(),
-      image: image ?? sku.image,
-      mrp: Number(mrp) || sku.mrp,
-      price: Number(price) || sku.price,
-      weightGrams: Number(weightGrams) || sku.weightGrams,
-      stock,
-    })
+    saveSkuDetail(
+      sku.id,
+      {
+        name: name.trim() || sku.name,
+        description: description.trim(),
+        image: image ?? sku.image,
+        mrp: Number(mrp) || sku.mrp,
+        price: Number(price) || sku.price,
+        weightGrams: Number(weightGrams) || sku.weightGrams,
+        stock,
+        platforms,
+        stockedStoreIds,
+        darkStoreAvailability: computeDarkStoreAvailability(stockedStoreIds),
+        stores: stockedStoreIds.length,
+        darkStores: `${stockedStoreIds.length}/${darkStoreLocations.length}`,
+      },
+      pinnedCategoryIds
+    )
     closeSkuDetail()
   }
 
@@ -220,9 +221,9 @@ export function SkuDetailDrawer() {
               <PopoverTrigger
                 render={
                   <button type="button" className={selectTriggerClasses}>
-                    <span className={memberCategories.length ? "" : "text-muted-foreground"}>
-                      {memberCategories.length > 0
-                        ? `${memberCategories.length} categor${memberCategories.length === 1 ? "y" : "ies"}`
+                    <span className={pinnedCategories.length ? "" : "text-muted-foreground"}>
+                      {pinnedCategories.length > 0
+                        ? `${pinnedCategories.length} categor${pinnedCategories.length === 1 ? "y" : "ies"}`
                         : "Category"}
                     </span>
                     <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
@@ -251,19 +252,20 @@ export function SkuDetailDrawer() {
                         type="button"
                         // Unchecking a SKU's only remaining category isn't a delete — it falls
                         // back to Unlisted — so nothing here needs to be un-selectable.
-                        onClick={() => togglePin(c.id, memberCategoryIds.has(c.id))}
+                        onClick={() => togglePin(c.id, pinnedCategoryIdSet.has(c.id))}
                         className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                       >
                         <span
                           className={`flex size-4 shrink-0 items-center justify-center rounded border ${
-                            memberCategoryIds.has(c.id)
+                            pinnedCategoryIdSet.has(c.id)
                               ? "border-primary bg-primary text-primary-foreground"
                               : "border-input"
                           }`}
                         >
-                          {memberCategoryIds.has(c.id) && <Check className="size-3" />}
+                          {pinnedCategoryIdSet.has(c.id) && <Check className="size-3" />}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-foreground">{c.title}</span>
+                        <CategoryStatusTag status={c.status} />
                       </button>
                     ))
                   )}
@@ -282,7 +284,7 @@ export function SkuDetailDrawer() {
               </PopoverContent>
             </Popover>
             <div className="flex flex-wrap items-center gap-2">
-              {memberCategories.map((c) => (
+              {pinnedCategories.map((c) => (
                 <span
                   key={c.id}
                   className="inline-flex items-center gap-1 rounded-md border-[0.5px] border-emerald-600/10 bg-emerald-600/5 px-1.5 py-0.5 text-xs font-medium text-emerald-800"
@@ -291,7 +293,7 @@ export function SkuDetailDrawer() {
                   {c.id !== UNLISTED_CATEGORY_ID && (
                     <button
                       type="button"
-                      onClick={() => unpinSkuFromCategory(sku.id, c.id)}
+                      onClick={() => togglePin(c.id, true)}
                       aria-label={`Unpin from ${c.title}`}
                       className="text-emerald-800/60 hover:text-emerald-800"
                     >
@@ -333,9 +335,9 @@ export function SkuDetailDrawer() {
               <DropdownMenuTrigger
                 render={
                   <button type="button" className={selectTriggerClasses}>
-                    <span className={sku.platforms.length ? "" : "text-muted-foreground"}>
-                      {sku.platforms.length > 0
-                        ? `${sku.platforms.length} Platform${sku.platforms.length === 1 ? "" : "s"}`
+                    <span className={platforms.length ? "" : "text-muted-foreground"}>
+                      {platforms.length > 0
+                        ? `${platforms.length} Platform${platforms.length === 1 ? "" : "s"}`
                         : "Select..."}
                     </span>
                     <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
@@ -355,9 +357,9 @@ export function SkuDetailDrawer() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {sku.platforms.length > 0 && (
+            {platforms.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                {sku.platforms.map((platform) => (
+                {platforms.map((platform) => (
                   <span
                     key={platform}
                     className="inline-flex items-center gap-1 rounded-md border-[0.5px] border-emerald-600/10 bg-emerald-600/5 px-1.5 py-0.5 text-xs font-medium text-emerald-800"

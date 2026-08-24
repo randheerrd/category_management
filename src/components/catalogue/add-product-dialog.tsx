@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { StatusCombobox } from "@/components/catalogue/status-combobox"
+import { CategoryStatusTag } from "@/components/catalogue/category-status-tag"
 import { stockStatusOptions, type StockStatus } from "@/lib/catalogue-data"
 import { channelNames } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
@@ -273,6 +274,7 @@ export function AddProductDialog({ onCreated }: AddProductDialogProps = {}) {
                           {pinnedCategoryIdSet.has(c.id) && <Check className="size-3" />}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-foreground">{c.title}</span>
+                        <CategoryStatusTag status={c.status} />
                       </button>
                     ))
                   )}

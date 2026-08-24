@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { parseCatalogueCsv, type CsvRowError } from "@/lib/csv"
+import { parseCatalogueCsv, parseCatalogueXlsx, type CsvRowError } from "@/lib/csv"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 type Step = "idle" | "uploading" | "success" | "error"
@@ -52,9 +52,14 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
     setSummary(null)
   }, [uploadCsvOpen])
 
+  const isXlsx = (picked: File) =>
+    /\.xlsx$/i.test(picked.name) ||
+    picked.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  const isCsv = (picked: File) => /\.csv$/i.test(picked.name) || picked.type === "text/csv"
+
   const pickFile = (picked: File | undefined) => {
     if (!picked) return
-    if (!/\.csv$/i.test(picked.name) && picked.type !== "text/csv") return
+    if (!isCsv(picked) && !isXlsx(picked)) return
     setFile(picked)
   }
 
@@ -85,9 +90,12 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
   const finishUpload = () => {
     if (!file) return
     const reader = new FileReader()
+    const xlsx = isXlsx(file)
+
     reader.onload = () => {
-      const text = String(reader.result ?? "")
-      const { rows, errors: parseErrors } = parseCatalogueCsv(text)
+      const { rows, errors: parseErrors } = xlsx
+        ? parseCatalogueXlsx(reader.result as ArrayBuffer)
+        : parseCatalogueCsv(String(reader.result ?? ""))
 
       if (parseErrors.length > 0) {
         setErrors(parseErrors)
@@ -103,7 +111,9 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
       setErrors([{ row: 0, message: "Could not read the file. Please try again." }])
       setStep("error")
     }
-    reader.readAsText(file)
+    // .xlsx is a binary (zip) format — needs to come in as bytes, not decoded as text.
+    if (xlsx) reader.readAsArrayBuffer(file)
+    else reader.readAsText(file)
   }
 
   const reset = () => {
@@ -117,7 +127,7 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
     <Dialog open={uploadCsvOpen} onOpenChange={(open) => !open && closeUploadCsv()}>
       <DialogContent className="rounded-[8px] sm:max-w-[520px]" showCloseButton>
         <DialogHeader>
-          <DialogTitle>Upload CSV</DialogTitle>
+          <DialogTitle>Upload CSV / XLSX</DialogTitle>
           <DialogDescription>Bulk-import SKUs into your catalogue from a spreadsheet.</DialogDescription>
         </DialogHeader>
 
@@ -127,7 +137,7 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               hidden
               onChange={(e) => pickFile(e.target.files?.[0])}
             />
@@ -145,7 +155,7 @@ export function UploadCsvDialog({ onImported }: UploadCsvDialogProps) {
             >
               <UploadCloud className="size-6 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
-              <p className="text-xs text-muted-foreground">.csv files only</p>
+              <p className="text-xs text-muted-foreground">.csv or .xlsx files only</p>
             </div>
 
             {file && (

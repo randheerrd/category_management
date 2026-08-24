@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { SidebarNav } from "@/components/catalogue/sidebar-nav"
 import { TopBar } from "@/components/catalogue/top-bar"
 import { CatalogueHealthPanel } from "@/components/catalogue/catalogue-health-panel"
@@ -14,7 +15,20 @@ import { useCatalogue } from "@/lib/catalogue-context"
 
 /** The populated catalogue board — assumes a CatalogueProvider is mounted above it. */
 export function CatalogueHealthPage() {
-  const { showAnalyticsPanel } = useCatalogue()
+  const { showAnalyticsPanel, toggleAnalyticsPanel } = useCatalogue()
+
+  // ⌘. (Ctrl+. on Windows/Linux) toggles the Catalogue Health panel — same action as
+  // its own collapse button, just reachable without leaving the keyboard.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === ".") {
+        e.preventDefault()
+        toggleAnalyticsPanel()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [toggleAnalyticsPanel])
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f8fafc] text-foreground">

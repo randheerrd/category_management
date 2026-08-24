@@ -3,14 +3,9 @@ import { ChevronDown, Plus, GripVertical } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { CategoryStatusTag } from "@/components/catalogue/category-status-tag"
 import type { Category, CategorySku } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
-
-const statusTagClasses: Record<Category["status"], string> = {
-  Active: "bg-emerald-600/5 border-emerald-600/10 text-emerald-800",
-  Planning: "bg-indigo-600/5 border-indigo-600/10 text-indigo-800",
-  Discontinued: "bg-slate-600/5 border-slate-600/10 text-slate-700",
-}
 
 interface SkuRowProps {
   sku: CategorySku
@@ -190,7 +185,7 @@ export function CategoryCard({
                           toggleCollapsed(id)
                         }
                       }}
-                      className="flex size-5 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100 hover:bg-background hover:text-foreground"
+                      className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
                     >
                       <ChevronDown className={`size-3.5 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
                     </span>
@@ -204,11 +199,7 @@ export function CategoryCard({
             <span className="flex min-w-6 items-center justify-center rounded-md border-[0.5px] border-stone-500/10 bg-stone-500/5 px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap text-stone-800">
               {skus.length} Item{skus.length === 1 ? "" : "s"}
             </span>
-            <span
-              className={`flex min-w-6 items-center justify-center rounded-md border-[0.5px] px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap ${statusTagClasses[status]}`}
-            >
-              {status}
-            </span>
+            <CategoryStatusTag status={status} />
           </div>
         </div>
       </div>

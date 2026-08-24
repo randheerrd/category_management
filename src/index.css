@@ -147,3 +147,11 @@
     border-radius: 9999px;
   }
 }
+
+/* Hides the fullscreen button on the tour video's native controls. The `controlsList`
+   attribute is the standard way to ask for this but isn't consistently honored across
+   Chromium builds — this pseudo-element selector (Chrome/Safari/Edge) reliably works
+   where that doesn't. */
+video.no-fullscreen-button::-webkit-media-controls-fullscreen-button {
+  display: none !important;
+}

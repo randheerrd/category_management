@@ -14,6 +14,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { channelNames, stockStatusOptions, type CategorySku, type StockStatus } from "@/lib/catalogue-data"
 import { StatusCombobox } from "@/components/catalogue/status-combobox"
+import { CategoryStatusTag } from "@/components/catalogue/category-status-tag"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { darkStoreLocations } from "@/lib/dark-store-locations"
 
@@ -278,6 +279,7 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
                           {pickedCategoryIdSet.has(c.id) && <Check className="size-3" />}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-foreground">{c.title}</span>
+                        <CategoryStatusTag status={c.status} />
                       </button>
                     ))
                   )}

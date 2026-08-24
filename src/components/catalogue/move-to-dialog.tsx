@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { StatusCombobox } from "@/components/catalogue/status-combobox"
+import { CategoryStatusTag } from "@/components/catalogue/category-status-tag"
 import { categoryStatusOptions, type CategoryStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
@@ -147,6 +148,7 @@ export function MoveToDialog({ open, onOpenChange, skuIds }: MoveToDialogProps) 
                               {selectedIds.includes(c.id) && <Check className="size-3" />}
                             </span>
                             <span className="min-w-0 flex-1 truncate text-foreground">{c.title}</span>
+                            <CategoryStatusTag status={c.status} />
                           </button>
                         ))
                       )}

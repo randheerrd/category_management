@@ -1,3 +1,5 @@
+import * as XLSX from "xlsx"
+
 import type { CategoryStatus, StockStatus } from "@/lib/catalogue-data"
 
 export interface CsvRow {
@@ -60,24 +62,15 @@ function splitCsvLine(line: string): string[] {
   return fields
 }
 
-/** Parses a CSV file's text into catalogue rows, collecting per-row validation errors rather than throwing. */
-export function parseCatalogueCsv(text: string): CsvParseResult {
-  const lines = text.split(/\r\n|\n|\r/).filter((line) => line.trim().length > 0)
+/** Row-array validation shared by both formats — CSV hands it string[] split from each
+ *  text line, XLSX hands it string[] read straight off each sheet row. Whichever format
+ *  got us here, from this point on a "row" is just 8 positional string fields. */
+function parseCatalogueRows(dataRows: string[][], rowNumberOffset: number): CsvParseResult {
   const rows: CsvRow[] = []
   const errors: CsvRowError[] = []
 
-  if (lines.length === 0) {
-    return { rows, errors: [{ row: 0, message: "The file is empty." }] }
-  }
-
-  const header = splitCsvLine(lines[0]).map((h) => h.toLowerCase())
-  const expectedHeader = HEADERS.map((h) => h.toLowerCase())
-  const looksLikeHeader = expectedHeader.every((h, i) => header[i] === h)
-  const dataLines = looksLikeHeader ? lines.slice(1) : lines
-
-  dataLines.forEach((line, index) => {
-    const rowNumber = index + (looksLikeHeader ? 2 : 1)
-    const fields = splitCsvLine(line)
+  dataRows.forEach((fields, index) => {
+    const rowNumber = index + rowNumberOffset
     const [category, name, priceRaw, mrpRaw, weightRaw, platform, stockRaw, statusRaw] = fields
 
     if (!category?.trim()) {
@@ -118,4 +111,54 @@ export function parseCatalogueCsv(text: string): CsvParseResult {
   })
 
   return { rows, errors }
+}
+
+/** True when a row of cells is the header row — same column names as HEADERS, regardless
+ *  of case. Used to skip it whether it came from a CSV line or an XLSX sheet row. */
+function looksLikeHeaderRow(fields: string[]): boolean {
+  const expectedHeader = HEADERS.map((h) => h.toLowerCase())
+  return expectedHeader.every((h, i) => (fields[i] ?? "").trim().toLowerCase() === h)
+}
+
+/** Parses a CSV file's text into catalogue rows, collecting per-row validation errors rather than throwing. */
+export function parseCatalogueCsv(text: string): CsvParseResult {
+  const lines = text.split(/\r\n|\n|\r/).filter((line) => line.trim().length > 0)
+
+  if (lines.length === 0) {
+    return { rows: [], errors: [{ row: 0, message: "The file is empty." }] }
+  }
+
+  const allFields = lines.map(splitCsvLine)
+  const hasHeader = looksLikeHeaderRow(allFields[0])
+  const dataRows = hasHeader ? allFields.slice(1) : allFields
+
+  return parseCatalogueRows(dataRows, hasHeader ? 2 : 1)
+}
+
+/** Parses an uploaded .xlsx workbook's first sheet the same way parseCatalogueCsv parses
+ *  a .csv file — same columns (see HEADERS), same per-row validation, so the "Upload CSV"
+ *  flow doesn't need to know or care which format the user actually picked. */
+export function parseCatalogueXlsx(data: ArrayBuffer): CsvParseResult {
+  let sheetRows: unknown[][]
+  try {
+    const workbook = XLSX.read(data, { type: "array" })
+    const firstSheetName = workbook.SheetNames[0]
+    const sheet = firstSheetName ? workbook.Sheets[firstSheetName] : undefined
+    if (!sheet) return { rows: [], errors: [{ row: 0, message: "The file has no sheets." }] }
+    sheetRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: false })
+  } catch {
+    return { rows: [], errors: [{ row: 0, message: "Could not read this file as an Excel workbook." }] }
+  }
+
+  if (sheetRows.length === 0) {
+    return { rows: [], errors: [{ row: 0, message: "The file is empty." }] }
+  }
+
+  // Cells come back typed (numbers as numbers, etc.) — stringify so the same positional
+  // validation logic that handles raw CSV text fields works unchanged here too.
+  const allFields = sheetRows.map((row) => row.map((cell) => (cell === null || cell === undefined ? "" : String(cell))))
+  const hasHeader = looksLikeHeaderRow(allFields[0])
+  const dataRows = hasHeader ? allFields.slice(1) : allFields
+
+  return parseCatalogueRows(dataRows, hasHeader ? 2 : 1)
 }

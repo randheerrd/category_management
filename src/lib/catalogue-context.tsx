@@ -97,6 +97,7 @@ interface CatalogueContextValue {
   openSkuDetail: (skuId: string) => void
   closeSkuDetail: () => void
   updateSku: (skuId: string, patch: Partial<CategorySku>) => void
+  saveSkuDetail: (skuId: string, patch: Partial<CategorySku>, nextCategoryIds: string[]) => void
   bulkUpdateSkus: (skuIds: string[], patch: Partial<CategorySku>) => void
   bulkAddCategoriesToSkus: (skuIds: string[], categoryIds: string[]) => void
   bulkAddPlatformsToSkus: (skuIds: string[], platforms: string[]) => void
@@ -351,6 +352,36 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       }))
     )
     if (sku) toast(`Saved "${sku.name}"`)
+  }
+
+  // The SKU detail drawer's single Save action — field edits AND category pins are held
+  // in the drawer's own local state while it's open (no progressive saving), then this
+  // applies everything, including the full pin/unpin diff, in one update with one toast.
+  const saveSkuDetail = (skuId: string, patch: Partial<CategorySku>, nextCategoryIds: string[]) => {
+    const sku = categories.flatMap((c) => c.skus).find((s) => s.id === skuId)
+    if (!sku) return
+    const updatedSku = { ...sku, ...patch }
+    const targetIds = nextCategoryIds.length > 0 ? nextCategoryIds : [UNLISTED_CATEGORY_ID]
+    const targetSet = new Set(targetIds)
+    setCategories((prev) =>
+      prev.map((c) => {
+        const wasMember = c.skus.some((s) => s.id === skuId)
+        const shouldBeMember = targetSet.has(c.id)
+        if (shouldBeMember) {
+          return {
+            ...c,
+            itemCount: wasMember ? c.itemCount : c.itemCount + 1,
+            skus: wasMember ? c.skus.map((s) => (s.id === skuId ? updatedSku : s)) : [...c.skus, updatedSku],
+          }
+        }
+        if (wasMember) {
+          return { ...c, itemCount: Math.max(0, c.itemCount - 1), skus: c.skus.filter((s) => s.id !== skuId) }
+        }
+        return c
+      })
+    )
+    toast(`Saved "${updatedSku.name}"`)
+    logActivity(`Edited ${updatedSku.name}`, "edit")
   }
 
   // Bulk "Edit Detail" from the selection bar — applies the same patch (only the fields
@@ -864,6 +895,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     openSkuDetail,
     closeSkuDetail,
     updateSku,
+    saveSkuDetail,
     bulkUpdateSkus,
     bulkAddCategoriesToSkus,
     bulkAddPlatformsToSkus,
