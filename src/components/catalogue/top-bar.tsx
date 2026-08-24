@@ -47,7 +47,7 @@ export function TopBar() {
             <DropdownMenuTrigger
               render={
                 <Button className="min-w-16">
-                  Create
+                  Add
                   <ChevronDown className="size-4" />
                 </Button>
               }
