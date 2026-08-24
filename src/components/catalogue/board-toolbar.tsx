@@ -49,8 +49,9 @@ export function BoardToolbar() {
           <button
             type="button"
             onClick={() => setView("grid")}
+            aria-pressed={view === "grid"}
             className={`flex min-w-8 items-center justify-center border-r border-border px-3 ${
-              view === "grid" ? "bg-background" : "bg-muted"
+              view === "grid" ? "bg-background shadow-sm" : "bg-transparent hover:bg-background/60"
             }`}
           >
             <LayoutGrid className="size-4 text-foreground" />
@@ -58,8 +59,9 @@ export function BoardToolbar() {
           <button
             type="button"
             onClick={() => setView("table")}
+            aria-pressed={view === "table"}
             className={`flex min-w-8 items-center justify-center px-3 ${
-              view === "table" ? "bg-background" : "bg-muted"
+              view === "table" ? "bg-background shadow-sm" : "bg-transparent hover:bg-background/60"
             }`}
           >
             <TableIcon className="size-4 text-foreground" />
