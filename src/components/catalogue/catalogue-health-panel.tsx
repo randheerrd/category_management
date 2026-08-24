@@ -23,7 +23,7 @@ import {
   computeChannelCoverage,
   computeHealthScore,
   computeSkuHealthCounts,
-  computeStatusBreakdown,
+  UNLISTED_CATEGORY_ID,
   type ActivityType,
 } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
@@ -73,18 +73,69 @@ function scoreLabel(score: number) {
 
 /** Left rail summarizing overall catalogue health — collapses to a thin icon strip. */
 export function CatalogueHealthPanel() {
-  const { categories, activity, setSearch, openSkuDetail, showAnalyticsPanel, toggleAnalyticsPanel } = useCatalogue()
+  const {
+    categories,
+    activity,
+    setSearch,
+    openSkuDetail,
+    showAnalyticsPanel,
+    toggleAnalyticsPanel,
+    clearFilters,
+    setStockStatusFilterAll,
+    setCoverageFilter,
+    setCategoryFilterIds,
+    setStatusFilterAll,
+    setView,
+  } = useCatalogue()
   const [reportOpen, setReportOpen] = useState(false)
   const [issuesOpen, setIssuesOpen] = useState(false)
   const [activityOpen, setActivityOpen] = useState(false)
 
   const score = computeHealthScore(categories)
-  const statusRows = computeStatusBreakdown(categories)
   const channelCoverage = computeChannelCoverage(categories)
   const issues = computeCatalogueIssues(categories)
-  // Same count as the "Need attention" breakdown row below it — the banner and the row
-  // must always agree, so both read off computeSkuHealthCounts instead of separate math.
-  const { attention: attentionCount } = computeSkuHealthCounts(categories)
+  // Same count as the "Need attention" banner above it — both read off computeSkuHealthCounts
+  // instead of separate math, so they can never disagree.
+  const { live: liveCount, total: totalCount } = computeSkuHealthCounts(categories)
+  const attentionCount = issues.length
+
+  const unpinnedCount = categories.find((c) => c.id === UNLISTED_CATEGORY_ID)?.skus.length ?? 0
+  const planningCount = categories.filter((c) => c.status === "Planning").length
+
+  // Each row filters the board down to exactly what its own text describes — clearFilters
+  // first so a stale filter from earlier browsing doesn't quietly narrow the result further.
+  const actionRows = [
+    {
+      id: "live",
+      label: `${liveCount}/${totalCount} SKUs Live`,
+      helper: "Ready across all active channels",
+      onClick: () => {
+        clearFilters()
+        setStockStatusFilterAll(new Set(["In Stock"]))
+        setCoverageFilter("full")
+        setView("table")
+      },
+    },
+    {
+      id: "unpinned",
+      label: `${unpinnedCount} SKU${unpinnedCount === 1 ? "" : "s"} aren't pinned to any category`,
+      helper: "Need categorisation before going live",
+      onClick: () => {
+        clearFilters()
+        setCategoryFilterIds(new Set([UNLISTED_CATEGORY_ID]))
+        setView("table")
+      },
+    },
+    {
+      id: "planning",
+      label: `${planningCount} Categor${planningCount === 1 ? "y is" : "ies are"} still in Planning`,
+      helper: "Not yet published",
+      onClick: () => {
+        clearFilters()
+        setStatusFilterAll(new Set(["Planning"]))
+      },
+    },
+  ]
 
   const allSkus = categories.flatMap((c) => c.skus)
   const hasData = allSkus.length > 0
@@ -162,19 +213,19 @@ export function CatalogueHealthPanel() {
               </div>
 
               <div className="flex w-full flex-col items-start overflow-hidden rounded-sm border border-border">
-                {statusRows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex w-full items-center justify-between border-b border-border px-4 py-3 last:border-b-0"
+                {actionRows.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={row.onClick}
+                    className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left last:border-b-0 hover:bg-muted"
                   >
                     <div className="flex flex-col items-start gap-0.5">
                       <p className="text-sm leading-5 font-medium text-foreground">{row.label}</p>
                       <p className="text-xs leading-4 text-muted-foreground">{row.helper}</p>
                     </div>
-                    <span className="flex shrink-0 items-center justify-center rounded-full bg-secondary px-2.5 py-0.5 text-xs leading-4 font-semibold text-secondary-foreground">
-                      {row.value}
-                    </span>
-                  </div>
+                    <ArrowRight className="size-4 shrink-0 text-foreground" />
+                  </button>
                 ))}
               </div>
             </div>
