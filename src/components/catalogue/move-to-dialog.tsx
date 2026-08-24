@@ -115,7 +115,7 @@ export function MoveToDialog({ open, onOpenChange, skuIds }: MoveToDialogProps) 
                       </button>
                     }
                   />
-                  <PopoverContent align="start" className="w-[352px] max-w-[calc(100vw-3rem)] p-2">
+                  <PopoverContent align="start" className="w-(--anchor-width) max-w-[calc(100vw-3rem)] p-2">
                     <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5">
                       <Search className="size-3.5 shrink-0 text-muted-foreground" />
                       <input
