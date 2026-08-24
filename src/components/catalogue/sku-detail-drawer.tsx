@@ -12,9 +12,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { UNLISTED_CATEGORY_ID, type StockStatus } from "@/lib/catalogue-data"
+import { UNLISTED_CATEGORY_ID, computeDarkStoreAvailability, type StockStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
-import { channelLogos } from "@/lib/channel-logos"
+import { darkStoreCities, darkStoreLocations } from "@/lib/dark-store-locations"
 import { ConfirmDialog } from "@/components/catalogue/confirm-dialog"
 
 /** Shared look for the two "select" triggers below — matches the old native <select>'s box. */
@@ -68,8 +68,21 @@ export function SkuDetailDrawer() {
 
   if (memberCategories.length === 0 || !sku) return null
 
-  const totalFilled = sku.darkStoreAvailability.reduce((sum, c) => sum + c.filled, 0)
-  const totalStores = sku.darkStoreAvailability.reduce((sum, c) => sum + c.total, 0)
+  const stockedStoreIdSet = new Set(sku.stockedStoreIds)
+  const totalFilled = sku.stockedStoreIds.length
+  const totalStores = darkStoreLocations.length
+
+  const toggleStockedStore = (storeId: string) => {
+    const nextIds = stockedStoreIdSet.has(storeId)
+      ? sku.stockedStoreIds.filter((id) => id !== storeId)
+      : [...sku.stockedStoreIds, storeId]
+    updateSku(sku.id, {
+      stockedStoreIds: nextIds,
+      darkStoreAvailability: computeDarkStoreAvailability(nextIds),
+      stores: nextIds.length,
+      darkStores: `${nextIds.length}/${darkStoreLocations.length}`,
+    })
+  }
 
   const memberCategoryIds = new Set(memberCategories.map((c) => c.id))
   const togglePin = (categoryId: string, pinned: boolean) => {
@@ -252,29 +265,45 @@ export function SkuDetailDrawer() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-sm font-semibold text-foreground">
-              Dark Store Availability ({totalFilled}/{totalStores})
-            </p>
-            <div className="flex flex-col gap-4">
-              {sku.darkStoreAvailability.map((channel) => (
-                <div key={channel.name} className="flex items-center gap-2">
-                  <img
-                    src={channelLogos[channel.name]}
-                    alt=""
-                    className="size-5 shrink-0 rounded-sm object-cover"
-                  />
-                  <div className="flex flex-1 items-center gap-2">
-                    <p className="w-[90px] shrink-0 text-sm leading-5 text-foreground">{channel.name}</p>
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(2,6,23,0.2)]">
-                      <div
-                        className="h-full rounded-full bg-green-600"
-                        style={{ width: `${(channel.filled / channel.total) * 100}%` }}
-                      />
-                    </div>
-                    <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 text-xs leading-4 font-semibold text-secondary-foreground">
-                      {channel.filled}/{channel.total}
-                    </span>
-                  </div>
+            <div className="flex items-center gap-3">
+              <p className="shrink-0 text-sm font-semibold text-foreground">Dark Store Availability</p>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(2,6,23,0.2)]">
+                <div
+                  className="h-full rounded-full bg-green-600"
+                  style={{ width: `${totalStores === 0 ? 0 : (totalFilled / totalStores) * 100}%` }}
+                />
+              </div>
+              <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 text-xs leading-4 font-semibold text-secondary-foreground">
+                {totalFilled}/{totalStores}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-[10px] bg-muted/50 p-3">
+              {darkStoreCities.map((city) => (
+                <div key={city} className="flex flex-col gap-1.5">
+                  <p className="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">{city}</p>
+                  {darkStoreLocations
+                    .filter((store) => store.city === city)
+                    .map((store) => {
+                      const checked = stockedStoreIdSet.has(store.id)
+                      return (
+                        <button
+                          key={store.id}
+                          type="button"
+                          onClick={() => toggleStockedStore(store.id)}
+                          className="flex items-center gap-2 rounded-md px-1 py-1 text-left text-sm hover:bg-background"
+                        >
+                          <span
+                            className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                              checked ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                            }`}
+                          >
+                            {checked && <Check className="size-3" />}
+                          </span>
+                          <span className="text-foreground">{store.name}</span>
+                        </button>
+                      )
+                    })}
                 </div>
               ))}
             </div>

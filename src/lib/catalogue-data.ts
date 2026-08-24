@@ -1,4 +1,5 @@
 import { products, findProductImageByName, type Product } from "@/lib/products"
+import { darkStoreLocations } from "@/lib/dark-store-locations"
 
 export type StockStatus = "In Stock" | "Low Stock" | "Out of Stock"
 
@@ -20,29 +21,31 @@ export interface CategorySku {
   darkStores: string
   stock: StockStatus
   darkStoreAvailability: DarkStoreAvailability[]
+  /** Which physical dark stores (see dark-store-locations.ts) actually stock this SKU —
+   *  the source of truth darkStoreAvailability/stores/darkStores are all derived from. */
+  stockedStoreIds: string[]
 }
 
-function randomInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min
+/** Picks a random subset of the real dark store list — each SKU gets its own overall
+ *  fill rate (sometimes near-empty, sometimes fully stocked, usually in between) so
+ *  coverage genuinely varies SKU to SKU instead of every product looking the same. */
+function randomStockedStoreIds(): string[] {
+  const fillRate = Math.random()
+  return darkStoreLocations.filter(() => Math.random() < fillRate).map((store) => store.id)
 }
 
-/** Realistic capacity range per channel — Amazon Now/Blinkit run the most dark stores,
- *  Zepto the fewest, so totals vary by channel as well as by SKU. */
-const channelCapacityRange: Record<string, [number, number]> = {
-  "Amazon Now": [8, 14],
-  Blinkit: [8, 12],
-  BigBasket: [6, 12],
-  Instamart: [6, 12],
-  Zepto: [3, 8],
-}
-
-/** Per-SKU dark-store breakdown — randomized per channel so coverage genuinely varies
- *  SKU to SKU instead of every product showing the same numbers. */
-function randomDarkStoreAvailability(): DarkStoreAvailability[] {
-  return Object.entries(channelCapacityRange).map(([name, [min, max]]) => {
-    const total = randomInt(min, max)
-    return { name, filled: randomInt(0, total), total }
-  })
+/** Per-channel filled/total, derived from which physical stores are actually stocked —
+ *  single source of truth so the card badge, table column, and detail drawer always agree. */
+export function computeDarkStoreAvailability(stockedStoreIds: string[]): DarkStoreAvailability[] {
+  const stocked = new Set(stockedStoreIds)
+  const byChannel = new Map<string, { filled: number; total: number }>()
+  for (const store of darkStoreLocations) {
+    const entry = byChannel.get(store.channel) ?? { filled: 0, total: 0 }
+    entry.total += 1
+    if (stocked.has(store.id)) entry.filled += 1
+    byChannel.set(store.channel, entry)
+  }
+  return [...byChannel.entries()].map(([name, { filled, total }]) => ({ name, filled, total }))
 }
 
 /** Derived from a SKU's own dark-store breakdown — no separate "coverage" field is stored. */
@@ -131,9 +134,10 @@ const stockCycle: StockStatus[] = ["In Stock", "In Stock", "Low Stock", "Out of 
 let skuSeq = 0
 export function makeSku(product: Product): CategorySku {
   skuSeq += 1
-  const darkStoreAvailability = randomDarkStoreAvailability()
-  const filled = darkStoreAvailability.reduce((sum, c) => sum + c.filled, 0)
-  const total = darkStoreAvailability.reduce((sum, c) => sum + c.total, 0)
+  const stockedStoreIds = randomStockedStoreIds()
+  const darkStoreAvailability = computeDarkStoreAvailability(stockedStoreIds)
+  const filled = stockedStoreIds.length
+  const total = darkStoreLocations.length
   return {
     id: `sku-${skuSeq}`,
     name: product.name,
@@ -141,13 +145,14 @@ export function makeSku(product: Product): CategorySku {
     price: product.price,
     weightGrams: product.weightGrams,
     // "Stores" everywhere else in the UI (card badge, table column) is derived from this
-    // same darkStoreAvailability breakdown, so they always agree with the detail drawer.
+    // same stocked-store list, so they always agree with the detail drawer.
     stores: filled,
     mrp: product.price + Math.max(1, Math.round(product.price * 0.1)),
     platform: platformCycle[(skuSeq - 1) % platformCycle.length],
     darkStores: `${filled}/${total}`,
     stock: stockCycle[(skuSeq - 1) % stockCycle.length],
     darkStoreAvailability,
+    stockedStoreIds,
   }
 }
 
@@ -168,9 +173,10 @@ export interface NewProductInput {
  */
 export function createSku(input: NewProductInput): CategorySku {
   skuSeq += 1
-  const darkStoreAvailability = randomDarkStoreAvailability()
-  const filled = darkStoreAvailability.reduce((sum, c) => sum + c.filled, 0)
-  const total = darkStoreAvailability.reduce((sum, c) => sum + c.total, 0)
+  const stockedStoreIds = randomStockedStoreIds()
+  const darkStoreAvailability = computeDarkStoreAvailability(stockedStoreIds)
+  const filled = stockedStoreIds.length
+  const total = darkStoreLocations.length
   return {
     id: `sku-${skuSeq}`,
     name: input.name,
@@ -183,6 +189,7 @@ export function createSku(input: NewProductInput): CategorySku {
     darkStores: `${filled}/${total}`,
     stock: input.stock,
     darkStoreAvailability,
+    stockedStoreIds,
   }
 }
 
