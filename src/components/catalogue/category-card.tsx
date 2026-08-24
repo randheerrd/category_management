@@ -80,8 +80,10 @@ function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: S
         // target) — without clipping it here, that hover/click area bleeds into the grip
         // icon and name text next to it, so hovering those shows a pointer cursor as if
         // they were part of the checkbox. size-4 + overflow-hidden masks it back down to
-        // just the checkbox's own bounds.
-        className="flex size-4 shrink-0 items-center overflow-hidden"
+        // just the checkbox's own bounds. cursor-pointer overrides the row's cursor-grab
+        // (this row is draggable) so the checkbox's own hotspot reads as clickable, same
+        // as the table view's checkbox, instead of inheriting the row's "grab" hand.
+        className="flex size-4 shrink-0 cursor-pointer items-center overflow-hidden"
       >
         <Checkbox checked={selected} onCheckedChange={onToggleSelected} />
       </span>

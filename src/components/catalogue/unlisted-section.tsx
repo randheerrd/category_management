@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from "react"
+import { useRef, useState, type DragEvent } from "react"
 import { ChevronDown } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
@@ -6,36 +6,70 @@ import type { Category } from "@/lib/catalogue-data"
 import { UNLISTED_CATEGORY_ID } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
-/** One Unlisted SKU rendered as a small card in the expanded stack grid. */
-function StackCard({ sku, selected, onToggleSelected, onOpenDetail }: {
+/** One Unlisted SKU rendered as a small card in the expanded stack grid — draggable
+ *  onto any category card to pin it, same drag source contract (`text/sku-id` +
+ *  `text/category-id`) every category card's own drop zone already understands. */
+function StackCard({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: {
   sku: Category["skus"][number]
+  categoryId: string
   selected: boolean
   onToggleSelected: () => void
   onOpenDetail: () => void
 }) {
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  const handleDragStart = (e: DragEvent) => {
+    e.dataTransfer.setData("text/sku-id", sku.id)
+    e.dataTransfer.setData("text/category-id", categoryId)
+    e.dataTransfer.effectAllowed = "move"
+
+    // Detached, explicitly-sized clone so the browser only ever snapshots the card
+    // itself — handing it the live in-flow node risks it grabbing the whole grid.
+    const source = cardRef.current
+    if (source) {
+      const rect = source.getBoundingClientRect()
+      const clone = source.cloneNode(true) as HTMLElement
+      clone.style.position = "fixed"
+      clone.style.top = "-9999px"
+      clone.style.left = "-9999px"
+      clone.style.width = `${rect.width}px`
+      clone.style.height = `${rect.height}px`
+      clone.style.margin = "0"
+      clone.style.pointerEvents = "none"
+      document.body.appendChild(clone)
+      e.dataTransfer.setDragImage(clone, e.clientX - rect.left, e.clientY - rect.top)
+      requestAnimationFrame(() => clone.remove())
+    }
+  }
+
   return (
     <div
+      ref={cardRef}
+      draggable
+      onDragStart={handleDragStart}
       role="button"
       tabIndex={0}
       onClick={onOpenDetail}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onOpenDetail()
       }}
-      className={`flex cursor-pointer flex-col gap-2 rounded-xl border bg-card p-2.5 text-left transition-colors ${
+      className={`flex cursor-grab flex-col gap-2 rounded-xl border bg-card p-2.5 text-left transition-colors active:cursor-grabbing ${
         selected ? "border-primary/30 bg-primary/5" : "border-border hover:bg-muted/40"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <img src={sku.image} alt="" className="size-10 shrink-0 rounded-[6px] object-cover" />
+        <img src={sku.image} alt="" draggable={false} className="size-10 shrink-0 rounded-[6px] object-cover" />
         <span
+          draggable={false}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           // Checkbox's invisible hit-target extends well past its visible box (bigger
           // tap target) — without clipping it here, that hover/click area bleeds into
           // the image next to it, so hovering the image itself shows a pointer cursor
           // as if it were part of the checkbox. size-4 + overflow-hidden masks it back
-          // down to just the checkbox's own bounds.
-          className="flex size-4 shrink-0 items-center overflow-hidden"
+          // down to just the checkbox's own bounds. cursor-pointer overrides the card's
+          // cursor-grab (it's draggable) so the checkbox reads as clickable, not "grab".
+          className="flex size-4 shrink-0 cursor-pointer items-center overflow-hidden"
         >
           <Checkbox checked={selected} onCheckedChange={onToggleSelected} />
         </span>
@@ -103,6 +137,7 @@ export function UnlistedSection({ category }: { category: Category }) {
               <StackCard
                 key={sku.id}
                 sku={sku}
+                categoryId={category.id}
                 selected={selectedSkuIds.has(sku.id)}
                 onToggleSelected={() => toggleSkuSelected(sku.id)}
                 onOpenDetail={() => openSkuDetail(sku.id)}
