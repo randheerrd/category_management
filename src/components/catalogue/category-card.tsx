@@ -76,7 +76,12 @@ function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: S
         draggable={false}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
-        className="flex shrink-0 items-center"
+        // Checkbox's invisible hit-target extends well past its visible box (bigger tap
+        // target) — without clipping it here, that hover/click area bleeds into the grip
+        // icon and name text next to it, so hovering those shows a pointer cursor as if
+        // they were part of the checkbox. size-4 + overflow-hidden masks it back down to
+        // just the checkbox's own bounds.
+        className="flex size-4 shrink-0 items-center overflow-hidden"
       >
         <Checkbox checked={selected} onCheckedChange={onToggleSelected} />
       </span>

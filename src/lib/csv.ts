@@ -62,16 +62,63 @@ function splitCsvLine(line: string): string[] {
   return fields
 }
 
+type FieldKey = "category" | "name" | "price" | "mrp" | "weightGrams" | "platform" | "stock" | "status"
+
+const FIELD_ORDER: FieldKey[] = ["category", "name", "price", "mrp", "weightGrams", "platform", "stock", "status"]
+
+/** A column's header text only has to fuzzy-match one of these (case/spacing/punctuation
+ *  stripped) to be recognized — so "Weight (g)", "weight", and "Grammage" all map to the
+ *  same field, and columns from a differently-shaped export (extra "Dark Stores" column,
+ *  reordered fields, "Platforms" plural, ...) still land correctly instead of shifting
+ *  every field over by one and failing validation on garbage. */
+const FIELD_ALIASES: Record<FieldKey, string[]> = {
+  category: ["category", "categoryname", "categories", "cat"],
+  name: ["skuname", "sku", "productname", "product", "itemname", "item", "name", "title"],
+  price: ["price", "sellingprice", "sp", "saleprice"],
+  mrp: ["mrp", "maxretailprice", "listprice"],
+  weightGrams: ["weightg", "weight", "weightgrams", "grammage", "grammageg", "wtg", "packsize", "packsizeg"],
+  platform: ["platform", "platforms", "channel", "channels"],
+  stock: ["stock", "stockstatus", "inventorystatus", "availability"],
+  status: ["status", "categorystatus", "catstatus"],
+}
+
+const DEFAULT_COLUMN_MAP: Record<FieldKey, number> = {
+  category: 0,
+  name: 1,
+  price: 2,
+  mrp: 3,
+  weightGrams: 4,
+  platform: 5,
+  stock: 6,
+  status: 7,
+}
+
 /** Row-array validation shared by both formats — CSV hands it string[] split from each
- *  text line, XLSX hands it string[] read straight off each sheet row. Whichever format
- *  got us here, from this point on a "row" is just 8 positional string fields. */
-function parseCatalogueRows(dataRows: string[][], rowNumberOffset: number): CsvParseResult {
+ *  text line, XLSX hands it string[] read straight off each sheet row. `columnMap` says
+ *  which index each field actually lives at (from header detection below, or the
+ *  template's plain left-to-right order when there's no header to read). */
+function parseCatalogueRows(
+  dataRows: string[][],
+  rowNumberOffset: number,
+  columnMap: Partial<Record<FieldKey, number>>
+): CsvParseResult {
   const rows: CsvRow[] = []
   const errors: CsvRowError[] = []
+  const get = (fields: string[], key: FieldKey) => {
+    const index = columnMap[key]
+    return index === undefined ? undefined : fields[index]
+  }
 
   dataRows.forEach((fields, index) => {
     const rowNumber = index + rowNumberOffset
-    const [category, name, priceRaw, mrpRaw, weightRaw, platform, stockRaw, statusRaw] = fields
+    const category = get(fields, "category")
+    const name = get(fields, "name")
+    const priceRaw = get(fields, "price")
+    const mrpRaw = get(fields, "mrp")
+    const weightRaw = get(fields, "weightGrams")
+    const platform = get(fields, "platform")
+    const stockRaw = get(fields, "stock")
+    const statusRaw = get(fields, "status")
 
     if (!category?.trim()) {
       errors.push({ row: rowNumber, message: "Missing category." })
@@ -113,11 +160,33 @@ function parseCatalogueRows(dataRows: string[][], rowNumberOffset: number): CsvP
   return { rows, errors }
 }
 
-/** True when a row of cells is the header row — same column names as HEADERS, regardless
- *  of case. Used to skip it whether it came from a CSV line or an XLSX sheet row. */
-function looksLikeHeaderRow(fields: string[]): boolean {
-  const expectedHeader = HEADERS.map((h) => h.toLowerCase())
-  return expectedHeader.every((h, i) => (fields[i] ?? "").trim().toLowerCase() === h)
+function normalizeHeaderCell(cell: string): string {
+  return cell.toLowerCase().replace(/[^a-z0-9]/g, "")
+}
+
+/** Scans a possible header row and maps each recognizable column to its field, by name,
+ *  regardless of order — so a reordered or differently-worded header still works, and any
+ *  column that doesn't match a known field (an extra "Dark Stores" column, a "Notes"
+ *  column, ...) is just left out of the map and ignored rather than breaking alignment.
+ *  Returns null when the required fields (category/name/price/weight) aren't found,
+ *  meaning this isn't a header row at all — the file has no header and its columns
+ *  should be read in the template's plain left-to-right order instead. */
+function detectHeaderMapping(headerRow: string[]): Partial<Record<FieldKey, number>> | null {
+  const normalized = headerRow.map(normalizeHeaderCell)
+  const claimed = new Set<number>()
+  const mapping: Partial<Record<FieldKey, number>> = {}
+
+  for (const field of FIELD_ORDER) {
+    const aliases = FIELD_ALIASES[field]
+    const index = normalized.findIndex((cell, i) => !claimed.has(i) && aliases.includes(cell))
+    if (index !== -1) {
+      mapping[field] = index
+      claimed.add(index)
+    }
+  }
+
+  const required: FieldKey[] = ["category", "name", "price", "weightGrams"]
+  return required.every((field) => mapping[field] !== undefined) ? mapping : null
 }
 
 /** Parses a CSV file's text into catalogue rows, collecting per-row validation errors rather than throwing. */
@@ -129,10 +198,10 @@ export function parseCatalogueCsv(text: string): CsvParseResult {
   }
 
   const allFields = lines.map(splitCsvLine)
-  const hasHeader = looksLikeHeaderRow(allFields[0])
-  const dataRows = hasHeader ? allFields.slice(1) : allFields
+  const headerMap = detectHeaderMapping(allFields[0])
+  const dataRows = headerMap ? allFields.slice(1) : allFields
 
-  return parseCatalogueRows(dataRows, hasHeader ? 2 : 1)
+  return parseCatalogueRows(dataRows, headerMap ? 2 : 1, headerMap ?? DEFAULT_COLUMN_MAP)
 }
 
 /** Parses an uploaded .xlsx workbook's first sheet the same way parseCatalogueCsv parses
@@ -157,8 +226,8 @@ export function parseCatalogueXlsx(data: ArrayBuffer): CsvParseResult {
   // Cells come back typed (numbers as numbers, etc.) — stringify so the same positional
   // validation logic that handles raw CSV text fields works unchanged here too.
   const allFields = sheetRows.map((row) => row.map((cell) => (cell === null || cell === undefined ? "" : String(cell))))
-  const hasHeader = looksLikeHeaderRow(allFields[0])
-  const dataRows = hasHeader ? allFields.slice(1) : allFields
+  const headerMap = detectHeaderMapping(allFields[0])
+  const dataRows = headerMap ? allFields.slice(1) : allFields
 
-  return parseCatalogueRows(dataRows, hasHeader ? 2 : 1)
+  return parseCatalogueRows(dataRows, headerMap ? 2 : 1, headerMap ?? DEFAULT_COLUMN_MAP)
 }

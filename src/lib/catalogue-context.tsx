@@ -69,6 +69,7 @@ interface CatalogueContextValue {
   setView: (view: BoardView) => void
   collapsedIds: Set<string>
   toggleCollapsed: (id: string) => void
+  expandCategory: (id: string) => void
   collapseAll: () => void
   expandAll: () => void
   allCollapsed: boolean
@@ -144,7 +145,9 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [priceMax, setPriceMax] = useState<number | null>(null)
   const [grammageFilter, setGrammageFilter] = useState<Set<number>>(new Set())
   const [view, setViewState] = useState<BoardView>("grid")
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
+  // Unlisted starts collapsed (it's just a count until you open it) — everything else
+  // starts expanded, same as before this shared collapsedIds mechanism covered Unlisted.
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set([UNLISTED_CATEGORY_ID]))
   // Read-only "last synced" timestamp — not a date to browse by (no per-date history exists to filter).
   const [date] = useState<Date>(new Date(2026, 7, 12))
   const [groupByCategory, setGroupByCategory] = useState(true)
@@ -530,6 +533,18 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  // Idempotent — safe to call whether or not the category was already expanded.
+  // Used by the health panel's "N SKUs aren't pinned" row so clicking it doesn't just
+  // filter the board down to Unlisted, it also opens the card so there's something to see.
+  const expandCategory = (id: string) => {
+    setCollapsedIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }
+
   const collapseAll = () => setCollapsedIds(new Set(categories.map((c) => c.id)))
   const expandAll = () => setCollapsedIds(new Set())
   const allCollapsed = categories.length > 0 && collapsedIds.size === categories.length
@@ -869,6 +884,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     setView,
     collapsedIds,
     toggleCollapsed,
+    expandCategory,
     collapseAll,
     expandAll,
     allCollapsed,

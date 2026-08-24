@@ -83,6 +83,7 @@ export function CatalogueHealthPanel() {
     setCoverageFilter,
     setCategoryFilterIds,
     setStatusFilterAll,
+    expandCategory,
   } = useCatalogue()
   const [activityOpen, setActivityOpen] = useState(false)
 
@@ -117,6 +118,7 @@ export function CatalogueHealthPanel() {
       onClick: () => {
         clearFilters()
         setCategoryFilterIds(new Set([UNLISTED_CATEGORY_ID]))
+        expandCategory(UNLISTED_CATEGORY_ID)
       },
     },
     {

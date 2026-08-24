@@ -30,7 +30,12 @@ function StackCard({ sku, selected, onToggleSelected, onOpenDetail }: {
         <span
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
-          className="flex shrink-0 items-center"
+          // Checkbox's invisible hit-target extends well past its visible box (bigger
+          // tap target) — without clipping it here, that hover/click area bleeds into
+          // the image next to it, so hovering the image itself shows a pointer cursor
+          // as if it were part of the checkbox. size-4 + overflow-hidden masks it back
+          // down to just the checkbox's own bounds.
+          className="flex size-4 shrink-0 items-center overflow-hidden"
         >
           <Checkbox checked={selected} onCheckedChange={onToggleSelected} />
         </span>
@@ -51,8 +56,10 @@ function StackCard({ sku, selected, onToggleSelected, onOpenDetail }: {
  * SKUs out as a grid of small cards that wraps across the row and down the page.
  */
 export function UnlistedSection({ category }: { category: Category }) {
-  const { moveSku, openSkuDetail, selectedSkuIds, toggleSkuSelected } = useCatalogue()
-  const [expanded, setExpanded] = useState(false)
+  const { moveSku, openSkuDetail, selectedSkuIds, toggleSkuSelected, collapsedIds, toggleCollapsed } = useCatalogue()
+  // Shared with every other category card's collapse state — lets the health panel's
+  // "N SKUs aren't pinned" row expand this from outside instead of only toggling locally.
+  const expanded = !collapsedIds.has(category.id)
   const [dragOver, setDragOver] = useState(false)
 
   const handleDragOver = (e: DragEvent) => {
@@ -79,7 +86,7 @@ export function UnlistedSection({ category }: { category: Category }) {
     >
       <button
         type="button"
-        onClick={() => setExpanded((prev) => !prev)}
+        onClick={() => toggleCollapsed(category.id)}
         className="flex w-full items-center justify-between gap-2 p-3 text-left"
         aria-expanded={expanded}
       >
