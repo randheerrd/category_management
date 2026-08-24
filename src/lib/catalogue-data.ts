@@ -127,20 +127,25 @@ const platformCycle = channelNames
 const stockCycle: StockStatus[] = ["In Stock", "In Stock", "Low Stock", "Out of Stock"]
 
 let skuSeq = 0
-export function makeSku(product: Product, stores: number = randomInt(1, 10)): CategorySku {
+export function makeSku(product: Product): CategorySku {
   skuSeq += 1
+  const darkStoreAvailability = randomDarkStoreAvailability()
+  const filled = darkStoreAvailability.reduce((sum, c) => sum + c.filled, 0)
+  const total = darkStoreAvailability.reduce((sum, c) => sum + c.total, 0)
   return {
     id: `sku-${skuSeq}`,
     name: product.name,
     image: product.image,
     price: product.price,
     weightGrams: product.weightGrams,
-    stores,
+    // "Stores" everywhere else in the UI (card badge, table column) is derived from this
+    // same darkStoreAvailability breakdown, so they always agree with the detail drawer.
+    stores: filled,
     mrp: product.price + Math.max(1, Math.round(product.price * 0.1)),
     platform: platformCycle[(skuSeq - 1) % platformCycle.length],
-    darkStores: `${stores}/10`,
+    darkStores: `${filled}/${total}`,
     stock: stockCycle[(skuSeq - 1) % stockCycle.length],
-    darkStoreAvailability: randomDarkStoreAvailability(),
+    darkStoreAvailability,
   }
 }
 
@@ -159,20 +164,23 @@ export interface NewProductInput {
  * matches the name against the real flavour catalogue (e.g. CSV row "Lay's Classic Salted"
  * gets that flavour's actual packshot) instead of an arbitrary photo.
  */
-export function createSku(input: NewProductInput, stores: number = randomInt(1, 10)): CategorySku {
+export function createSku(input: NewProductInput): CategorySku {
   skuSeq += 1
+  const darkStoreAvailability = randomDarkStoreAvailability()
+  const filled = darkStoreAvailability.reduce((sum, c) => sum + c.filled, 0)
+  const total = darkStoreAvailability.reduce((sum, c) => sum + c.total, 0)
   return {
     id: `sku-${skuSeq}`,
     name: input.name,
     image: input.image ?? findProductImageByName(input.name) ?? products[skuSeq % products.length].image,
     price: input.price,
     weightGrams: input.weightGrams,
-    stores,
+    stores: filled,
     mrp: input.mrp,
     platform: input.platform,
-    darkStores: `${stores}/10`,
+    darkStores: `${filled}/${total}`,
     stock: input.stock,
-    darkStoreAvailability: randomDarkStoreAvailability(),
+    darkStoreAvailability,
   }
 }
 
@@ -185,8 +193,8 @@ export const initialCategories: Category[] = [
 
 /** Cycles through the real flavour range so each pinned SKU gets a distinct product photo. */
 let productCursor = 0
-const nextSkus = (count: number, stores?: number) =>
-  Array.from({ length: count }, () => makeSku(products[productCursor++ % products.length], stores))
+const nextSkus = (count: number) =>
+  Array.from({ length: count }, () => makeSku(products[productCursor++ % products.length]))
 
 /** Sample catalogue loaded by onboarding's "Add Manually" button — a realistic, fully
  *  populated board so a new user can explore the product before bringing in their own data. */
