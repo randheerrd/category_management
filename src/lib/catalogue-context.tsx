@@ -80,6 +80,10 @@ interface CatalogueContextValue {
   clearSelection: () => void
   bulkMoveToCategory: (skuIds: string[], toCategoryId: string) => void
   bulkRemoveFromCategory: (skuIds: string[]) => void
+  /** Adds a SKU into an additional category without touching its existing pins. */
+  pinSkuToCategory: (skuId: string, categoryId: string) => void
+  /** Removes a SKU from one specific category; falls back to Unlisted if that was its last pin. */
+  unpinSkuFromCategory: (skuId: string, categoryId: string) => void
   createCategoryAndMove: (skuIds: string[], input: { title: string; description: string; status: CategoryStatus }) => void
   showAnalyticsPanel: boolean
   toggleAnalyticsPanel: () => void
@@ -513,6 +517,43 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     logActivity(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`, "remove")
   }
 
+  // Pins into one additional category, keeping the SKU's other memberships intact — used by
+  // the detail drawer's multi-select "Pinned in" so a SKU can live in several categories at once.
+  const pinSkuToCategory = (skuId: string, categoryId: string) => {
+    const sku = categories.flatMap((c) => c.skus).find((s) => s.id === skuId)
+    const destination = categories.find((c) => c.id === categoryId)
+    if (!sku || !destination) return
+    if (destination.skus.some((s) => s.id === skuId)) return
+    setCategories((prev) =>
+      prev.map((c) => (c.id === categoryId ? { ...c, itemCount: c.itemCount + 1, skus: [...c.skus, sku] } : c))
+    )
+    toast(`Pinned "${sku.name}"`, { description: `To ${destination.title}` })
+    logActivity(`Move ${sku.name} to ${destination.title}`, "move")
+  }
+
+  // Removes a SKU from just one of its categories. If that was its only pin, it falls back
+  // to Unlisted — same "never orphan a SKU" rule bulkRemoveFromCategory follows.
+  const unpinSkuFromCategory = (skuId: string, categoryId: string) => {
+    const sku = categories.flatMap((c) => c.skus).find((s) => s.id === skuId)
+    const source = categories.find((c) => c.id === categoryId)
+    if (!sku || !source) return
+    const remainingMemberships = categories.filter((c) => c.id !== categoryId && c.skus.some((s) => s.id === skuId))
+    setCategories((prev) => {
+      const withoutSku = prev.map((c) =>
+        c.id === categoryId
+          ? { ...c, itemCount: Math.max(0, c.itemCount - 1), skus: c.skus.filter((s) => s.id !== skuId) }
+          : c
+      )
+      if (remainingMemberships.length > 0) return withoutSku
+      // Last pin removed — fall back to Unlisted, same as bulkRemoveFromCategory.
+      return withoutSku.map((c) =>
+        c.id === UNLISTED_CATEGORY_ID ? { ...c, itemCount: c.itemCount + 1, skus: [...c.skus, sku] } : c
+      )
+    })
+    toast.error(`Unpinned "${sku.name}"`, { description: `From ${source.title}` })
+    logActivity(`Removed ${sku.name} from category`, "remove")
+  }
+
   // "Move to" in the bulk selection bar can target a brand-new category — creates it and
   // moves the selection into it in one atomic update instead of two separate actions.
   const createCategoryAndMove = (
@@ -677,6 +718,8 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     clearSelection,
     bulkMoveToCategory,
     bulkRemoveFromCategory,
+    pinSkuToCategory,
+    unpinSkuFromCategory,
     createCategoryAndMove,
     showAnalyticsPanel,
     toggleAnalyticsPanel,

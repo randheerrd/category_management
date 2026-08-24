@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -24,17 +25,23 @@ const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 
 /** Right-side drawer for viewing and editing a single SKU. */
 export function SkuDetailDrawer() {
-  const { categories, selectedSkuId, closeSkuDetail, updateSku, deleteSku, bulkMoveToCategory, bulkRemoveFromCategory } =
-    useCatalogue()
+  const {
+    categories,
+    selectedSkuId,
+    closeSkuDetail,
+    updateSku,
+    deleteSku,
+    pinSkuToCategory,
+    unpinSkuFromCategory,
+  } = useCatalogue()
 
-  const category = categories.find((c) => c.skus.some((s) => s.id === selectedSkuId))
-  const sku = category?.skus.find((s) => s.id === selectedSkuId)
+  const memberCategories = categories.filter((c) => c.skus.some((s) => s.id === selectedSkuId))
+  const sku = memberCategories[0]?.skus.find((s) => s.id === selectedSkuId)
 
   const [mrp, setMrp] = useState("")
   const [price, setPrice] = useState("")
   const [weightGrams, setWeightGrams] = useState("")
   const [stock, setStock] = useState<StockStatus>("In Stock")
-  const [pinTarget, setPinTarget] = useState("")
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   useEffect(() => {
@@ -43,15 +50,18 @@ export function SkuDetailDrawer() {
     setPrice(String(sku.price))
     setWeightGrams(String(sku.weightGrams))
     setStock(sku.stock)
-    setPinTarget("")
   }, [sku])
 
-  if (!category || !sku) return null
+  if (memberCategories.length === 0 || !sku) return null
 
   const totalFilled = sku.darkStoreAvailability.reduce((sum, c) => sum + c.filled, 0)
   const totalStores = sku.darkStoreAvailability.reduce((sum, c) => sum + c.total, 0)
 
-  const otherCategories = categories.filter((c) => c.id !== category.id)
+  const memberCategoryIds = new Set(memberCategories.map((c) => c.id))
+  const togglePin = (categoryId: string, pinned: boolean) => {
+    if (pinned) unpinSkuFromCategory(sku.id, categoryId)
+    else pinSkuToCategory(sku.id, categoryId)
+  }
 
   const handleSave = () => {
     updateSku(sku.id, {
@@ -61,12 +71,6 @@ export function SkuDetailDrawer() {
       stock,
     })
     closeSkuDetail()
-  }
-
-  const handlePinHere = () => {
-    if (!pinTarget) return
-    bulkMoveToCategory([sku.id], pinTarget)
-    setPinTarget("")
   }
 
   return (
@@ -126,50 +130,53 @@ export function SkuDetailDrawer() {
 
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">Pinned in</p>
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button type="button" className={selectTriggerClasses}>
-                      <span className={pinTarget ? "" : "text-muted-foreground"}>
-                        {otherCategories.find((c) => c.id === pinTarget)?.title ?? "Category"}
-                      </span>
-                      <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  }
-                />
-                <DropdownMenuContent align="start">
-                  <DropdownMenuRadioGroup value={pinTarget} onValueChange={setPinTarget}>
-                    {otherCategories.map((c) => (
-                      <DropdownMenuRadioItem key={c.id} value={c.id}>
-                        {c.title}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button variant="secondary" onClick={handlePinHere} disabled={!pinTarget} className="shrink-0">
-                Pin Here
-              </Button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* This data model pins a SKU to a single category, so there's only ever one tag here. */}
-              <span className="inline-flex items-center gap-1 rounded-md border-[0.5px] border-emerald-600/10 bg-emerald-600/5 px-1.5 py-0.5 text-xs font-medium text-emerald-800">
-                {category.title}
-                {category.id !== UNLISTED_CATEGORY_ID && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      bulkRemoveFromCategory([sku.id])
-                      closeSkuDetail()
-                    }}
-                    aria-label={`Unpin from ${category.title}`}
-                    className="text-emerald-800/60 hover:text-emerald-800"
-                  >
-                    <X className="size-3" />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <button type="button" className={selectTriggerClasses}>
+                    <span className={memberCategories.length ? "" : "text-muted-foreground"}>
+                      {memberCategories.length > 0
+                        ? `${memberCategories.length} categor${memberCategories.length === 1 ? "y" : "ies"}`
+                        : "Category"}
+                    </span>
+                    <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
                   </button>
-                )}
-              </span>
+                }
+              />
+              <DropdownMenuContent align="start">
+                {categories.map((c) => (
+                  <DropdownMenuCheckboxItem
+                    key={c.id}
+                    checked={memberCategoryIds.has(c.id)}
+                    onCheckedChange={() => togglePin(c.id, memberCategoryIds.has(c.id))}
+                    // Unchecking a SKU's only remaining category isn't a delete — it falls
+                    // back to Unlisted — so nothing here needs to be un-selectable.
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {c.title}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="flex flex-wrap items-center gap-2">
+              {memberCategories.map((c) => (
+                <span
+                  key={c.id}
+                  className="inline-flex items-center gap-1 rounded-md border-[0.5px] border-emerald-600/10 bg-emerald-600/5 px-1.5 py-0.5 text-xs font-medium text-emerald-800"
+                >
+                  {c.title}
+                  {c.id !== UNLISTED_CATEGORY_ID && (
+                    <button
+                      type="button"
+                      onClick={() => unpinSkuFromCategory(sku.id, c.id)}
+                      aria-label={`Unpin from ${c.title}`}
+                      className="text-emerald-800/60 hover:text-emerald-800"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </span>
+              ))}
             </div>
           </div>
 
