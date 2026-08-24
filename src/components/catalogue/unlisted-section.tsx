@@ -21,8 +21,8 @@ function StackCard({ sku, selected, onToggleSelected, onOpenDetail }: {
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onOpenDetail()
       }}
-      className={`flex cursor-pointer flex-col gap-2 rounded-xl border bg-card p-2.5 text-left shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] transition-colors ${
-        selected ? "border-primary/30 bg-primary/5" : "border-[rgba(241,245,249,0.4)] hover:bg-muted/40"
+      className={`flex cursor-pointer flex-col gap-2 rounded-xl border bg-card p-2.5 text-left transition-colors ${
+        selected ? "border-primary/30 bg-primary/5" : "border-border hover:bg-muted/40"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -80,7 +80,7 @@ export function UnlistedSection({ category }: { category: Category }) {
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-2 p-3 text-left transition-colors hover:bg-muted"
+        className="flex w-full items-center justify-between gap-2 p-3 text-left"
         aria-expanded={expanded}
       >
         <p className="text-sm leading-5 font-semibold text-foreground">

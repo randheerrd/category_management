@@ -22,14 +22,28 @@ export interface CategorySku {
   darkStoreAvailability: DarkStoreAvailability[]
 }
 
-/** Per-SKU dark-store breakdown — same uniform dummy shape used across every pinned SKU. */
-const darkStoreAvailabilityTemplate: DarkStoreAvailability[] = [
-  { name: "Amazon Now", filled: 12, total: 12 },
-  { name: "Blinkit", filled: 10, total: 10 },
-  { name: "BigBasket", filled: 8, total: 10 },
-  { name: "Instamart", filled: 8, total: 10 },
-  { name: "Zepto", filled: 3, total: 6 },
-]
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+/** Realistic capacity range per channel — Amazon Now/Blinkit run the most dark stores,
+ *  Zepto the fewest, so totals vary by channel as well as by SKU. */
+const channelCapacityRange: Record<string, [number, number]> = {
+  "Amazon Now": [8, 14],
+  Blinkit: [8, 12],
+  BigBasket: [6, 12],
+  Instamart: [6, 12],
+  Zepto: [3, 8],
+}
+
+/** Per-SKU dark-store breakdown — randomized per channel so coverage genuinely varies
+ *  SKU to SKU instead of every product showing the same numbers. */
+function randomDarkStoreAvailability(): DarkStoreAvailability[] {
+  return Object.entries(channelCapacityRange).map(([name, [min, max]]) => {
+    const total = randomInt(min, max)
+    return { name, filled: randomInt(0, total), total }
+  })
+}
 
 /** Derived from a SKU's own dark-store breakdown — no separate "coverage" field is stored. */
 export type CoverageLevel = "any" | "none" | "partial" | "full"
@@ -102,7 +116,7 @@ const platformCycle = channelNames
 const stockCycle: StockStatus[] = ["In Stock", "In Stock", "Low Stock", "Out of Stock"]
 
 let skuSeq = 0
-export function makeSku(product: Product, stores: number = 4): CategorySku {
+export function makeSku(product: Product, stores: number = randomInt(1, 10)): CategorySku {
   skuSeq += 1
   return {
     id: `sku-${skuSeq}`,
@@ -115,7 +129,7 @@ export function makeSku(product: Product, stores: number = 4): CategorySku {
     platform: platformCycle[(skuSeq - 1) % platformCycle.length],
     darkStores: `${stores}/10`,
     stock: stockCycle[(skuSeq - 1) % stockCycle.length],
-    darkStoreAvailability: darkStoreAvailabilityTemplate,
+    darkStoreAvailability: randomDarkStoreAvailability(),
   }
 }
 
@@ -134,7 +148,7 @@ export interface NewProductInput {
  * matches the name against the real flavour catalogue (e.g. CSV row "Lay's Classic Salted"
  * gets that flavour's actual packshot) instead of an arbitrary photo.
  */
-export function createSku(input: NewProductInput, stores: number = 4): CategorySku {
+export function createSku(input: NewProductInput, stores: number = randomInt(1, 10)): CategorySku {
   skuSeq += 1
   return {
     id: `sku-${skuSeq}`,
@@ -147,7 +161,7 @@ export function createSku(input: NewProductInput, stores: number = 4): CategoryS
     platform: input.platform,
     darkStores: `${stores}/10`,
     stock: input.stock,
-    darkStoreAvailability: darkStoreAvailabilityTemplate,
+    darkStoreAvailability: randomDarkStoreAvailability(),
   }
 }
 
@@ -160,7 +174,7 @@ export const initialCategories: Category[] = [
 
 /** Cycles through the real flavour range so each pinned SKU gets a distinct product photo. */
 let productCursor = 0
-const nextSkus = (count: number, stores = 4) =>
+const nextSkus = (count: number, stores?: number) =>
   Array.from({ length: count }, () => makeSku(products[productCursor++ % products.length], stores))
 
 /** Sample catalogue loaded by onboarding's "Add Manually" button — a realistic, fully
