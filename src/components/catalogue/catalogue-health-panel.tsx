@@ -172,7 +172,7 @@ export function CatalogueHealthPanel() {
               <div className="flex w-full flex-col items-start gap-3 rounded-[10px] bg-muted/50 p-3">
                 <div className="flex w-full items-center justify-between">
                   <p className="text-sm leading-5 font-semibold text-foreground">Recent Activity</p>
-                  {activity.length > 3 && (
+                  {activity.length > 0 && (
                     <button
                       type="button"
                       onClick={() => setActivityOpen(true)}
