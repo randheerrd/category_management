@@ -1,11 +1,14 @@
-import { Search, LayoutGrid, Table as TableIcon, X, ChevronsDownUp, ChevronsUpDown } from "lucide-react"
+import { Search, LayoutGrid, Table as TableIcon, X, ChevronsDownUp, ChevronsUpDown, Download } from "lucide-react"
 
 import { FiltersDrawer } from "@/components/catalogue/filters-drawer"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useCatalogue } from "@/lib/catalogue-context"
+import { exportCatalogueToXlsx } from "@/lib/xlsx-export"
 
-/** Search input, collapse-all, filters button, and grid/table view switch above the board. */
+/** Search input, collapse-all, filters button, grid/table view switch, and XLSX export
+ *  above the board. */
 export function BoardToolbar() {
-  const { search, setSearch, view, setView, allCollapsed, collapseAll, expandAll } = useCatalogue()
+  const { categories, search, setSearch, view, setView, allCollapsed, collapseAll, expandAll } = useCatalogue()
 
   return (
     <div className="sticky top-0 z-20 flex h-12 w-full shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
@@ -62,6 +65,22 @@ export function BoardToolbar() {
             <TableIcon className="size-4 text-foreground" />
           </button>
         </div>
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={() => exportCatalogueToXlsx(categories)}
+                aria-label="Export XLSX"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-foreground hover:bg-muted"
+              >
+                <Download className="size-4" />
+              </button>
+            }
+          />
+          <TooltipContent side="bottom">Export XLSX</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )
