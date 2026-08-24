@@ -234,7 +234,7 @@ export function SkuTable() {
           <col className="w-[14%]" />
           <col className="w-[15%]" />
         </colgroup>
-        <TableHeader>
+        <TableHeader className="[&_tr]:border-b-0">
           <TableRow className="h-9 bg-background font-normal text-muted-foreground hover:bg-background [&>th]:h-9 [&>th]:py-0">
             <TableHead className="w-6 p-0" />
             <TableHead className="w-9 p-0 font-normal">

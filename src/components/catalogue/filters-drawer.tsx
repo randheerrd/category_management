@@ -24,10 +24,6 @@ const coverageLevels: { value: CoverageLevel; label: string }[] = [
   { value: "partial", label: "Partial" },
 ]
 
-// Not backed by any real data model (SKUs/categories have no city field) — a purely
-// cosmetic control matching the reference layout. Doesn't affect the SKU match count.
-const cities = ["Mumbai", "Delhi NCR", "Bengaluru", "Hyderabad", "Chennai", "Pune"]
-
 const selectTriggerClass =
   "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 
@@ -137,7 +133,6 @@ export function FiltersDrawer() {
   } = useCatalogue()
 
   const [open, setOpen] = useState(false)
-  const [draftCities, setDraftCities] = useState<Set<string>>(new Set())
   const [draftCategoryIds, setDraftCategoryIds] = useState<Set<string>>(new Set())
   const [draftStatus, setDraftStatus] = useState<Set<CategoryStatus>>(new Set())
   const [draftStock, setDraftStock] = useState<Set<StockStatus>>(new Set())
@@ -173,7 +168,6 @@ export function FiltersDrawer() {
 
   useEffect(() => {
     if (!open) return
-    setDraftCities(new Set())
     setDraftCategoryIds(new Set(categoryFilterIds))
     setDraftStatus(new Set(statusFilter))
     setDraftStock(new Set(stockStatusFilter))
@@ -202,7 +196,6 @@ export function FiltersDrawer() {
   const priceMaxDraft = parsedPriceMax != null && !Number.isNaN(parsedPriceMax) ? parsedPriceMax : null
 
   const handleClearAll = () => {
-    setDraftCities(new Set())
     setDraftCategoryIds(new Set())
     setDraftStatus(new Set())
     setDraftStock(new Set())
@@ -215,7 +208,6 @@ export function FiltersDrawer() {
   }
 
   const hasDraftFilters =
-    draftCities.size > 0 ||
     draftCategoryIds.size > 0 ||
     draftStatus.size > 0 ||
     draftStock.size > 0 ||
@@ -262,19 +254,6 @@ export function FiltersDrawer() {
           </SheetHeader>
 
           <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-            <div className="flex flex-col gap-2">
-              <SectionLabel>Location</SectionLabel>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-muted-foreground">City</span>
-                <MultiSelectField
-                  value={draftCities}
-                  onChange={setDraftCities}
-                  placeholder="All cities"
-                  options={cities.map((city) => ({ value: city, label: city }))}
-                />
-              </label>
-            </div>
-
             <label className="flex flex-col gap-1.5">
               <SectionLabel>Dark Store</SectionLabel>
               <MultiSelectField

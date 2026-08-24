@@ -11,8 +11,13 @@ import { useCatalogue } from "@/lib/catalogue-context"
 const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 const platformOptions = channelNames
 
+interface AddProductDialogProps {
+  /** Called once a product is actually created (not on Cancel) — e.g. to leave onboarding for the board. */
+  onCreated?: () => void
+}
+
 /** Centered "Add a product" form — creates a SKU and pins it into one or more categories. */
-export function AddProductDialog() {
+export function AddProductDialog({ onCreated }: AddProductDialogProps = {}) {
   const { categories, addProductOpen, addProductCategoryId, closeAddProduct, createProduct } = useCatalogue()
 
   const [name, setName] = useState("")
@@ -74,6 +79,7 @@ export function AddProductDialog() {
       },
       pinnedCategoryIds
     )
+    onCreated?.()
   }
 
   return (

@@ -143,12 +143,21 @@ export function createSku(input: NewProductInput, stores: number = 4): CategoryS
   }
 }
 
+// Board starts genuinely empty — the only category is the always-present Unlisted
+// catch-all, seeded with zero SKUs. Real content only appears once a user adds it,
+// via "Upload CSV" (a real import) or "Add Manually" (loads the sample catalogue below).
+export const initialCategories: Category[] = [
+  { id: UNLISTED_CATEGORY_ID, title: "Unlisted", description: "SKUs not currently pinned to any category.", itemCount: 0, status: "Active", skus: [] },
+]
+
 /** Cycles through the real flavour range so each pinned SKU gets a distinct product photo. */
 let productCursor = 0
 const nextSkus = (count: number, stores = 4) =>
   Array.from({ length: count }, () => makeSku(products[productCursor++ % products.length], stores))
 
-export const initialCategories: Category[] = [
+/** Sample catalogue loaded by onboarding's "Add Manually" button — a realistic, fully
+ *  populated board so a new user can explore the product before bringing in their own data. */
+export const demoCategories: Category[] = [
   { id: "cat-1", title: "Classic Potato Chips", description: "Everyday flagship flavours across every pack size.", itemCount: 10, status: "Active", skus: nextSkus(10) },
   { id: "cat-2", title: "Wavy Cut Range", description: "Ridged-cut chips for a heartier bite.", itemCount: 6, status: "Active", skus: nextSkus(5) },
   { id: "cat-3", title: "Gourmet Selection", description: "Premium adult-skewing flavours in smaller batches.", itemCount: 8, status: "Active", skus: nextSkus(8) },

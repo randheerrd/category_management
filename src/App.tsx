@@ -8,8 +8,10 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 
 /**
  * Switches between the empty-state onboarding screen and the populated board.
- * Both live inside one CatalogueProvider so a CSV imported during onboarding
- * is still on the board once the user continues past it.
+ * Both live inside one CatalogueProvider so a CSV import or manually-added product
+ * from onboarding is still on the board once the user continues past it. The board
+ * itself starts genuinely empty — this flag only tracks the onboarding screen, it
+ * doesn't seed any data (only "Add Manually" → real product, or "Upload CSV" does).
  */
 function AppShell() {
   const [onboarded, setOnboarded] = useState(false)

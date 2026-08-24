@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { PanelLeft, ArrowRight } from "lucide-react"
+import { PanelLeft, ArrowRight, BarChart3 } from "lucide-react"
 
 import { ScoreRing } from "@/components/catalogue/score-ring"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -31,6 +31,8 @@ export function CatalogueHealthPanel() {
   const issues = computeCatalogueIssues(categories)
 
   const allSkus = categories.flatMap((c) => c.skus)
+  const hasData = allSkus.length > 0
+
   const stockCounts = {
     "In Stock": allSkus.filter((s) => s.stock === "In Stock").length,
     "Low Stock": allSkus.filter((s) => s.stock === "Low Stock").length,
@@ -75,86 +77,105 @@ export function CatalogueHealthPanel() {
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col justify-between overflow-y-auto px-4 py-5">
-        <div className="flex flex-col items-start gap-6">
-          {/* Score + status */}
-          <div className="flex w-full flex-col items-center gap-3">
-            <ScoreRing score={score} />
-            <div className="flex w-full flex-col items-center text-center">
-              <p className="w-full text-base leading-6 font-semibold text-foreground">{scoreLabel(score)}</p>
-              <p className="w-full text-sm leading-5 text-amber-600">
-                {issues.length} Item{issues.length === 1 ? "" : "s"} need your attention
-              </p>
-            </div>
-
-            <div className="flex w-full flex-col items-start overflow-hidden rounded-sm border border-border">
-              {statusRows.map((row) => (
-                <div
-                  key={row.label}
-                  className="flex w-full items-center justify-between border-b border-border px-4 py-3 last:border-b-0"
-                >
-                  <div className="flex flex-col items-start gap-0.5">
-                    <p className="text-sm leading-5 font-medium text-foreground">{row.label}</p>
-                    <p className="text-xs leading-4 text-muted-foreground">{row.helper}</p>
-                  </div>
-                  <span className="flex shrink-0 items-center justify-center rounded-full bg-secondary px-2.5 py-0.5 text-xs leading-4 font-semibold text-secondary-foreground">
-                    {row.value}
-                  </span>
-                </div>
-              ))}
-            </div>
+      {!hasData ? (
+        /* Nothing pinned yet — a score/coverage read-out would just be zeroes and empty bars,
+           which reads as "your catalogue is broken" rather than "you haven't added anything".
+           Say the latter instead, and don't offer Full Report / Review Issues over no data. */
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <BarChart3 className="size-5" />
           </div>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-sm leading-5 font-semibold text-foreground">No health data yet</p>
+            <p className="max-w-[240px] text-sm leading-5 text-muted-foreground">
+              Health score, channel coverage, and issues will show up here once you add or import products.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col justify-between overflow-y-auto px-4 py-5">
+          <div className="flex flex-col items-start gap-6">
+            {/* Score + status */}
+            <div className="flex w-full flex-col items-center gap-3">
+              <ScoreRing score={score} />
+              <div className="flex w-full flex-col items-center text-center">
+                <p className="w-full text-base leading-6 font-semibold text-foreground">{scoreLabel(score)}</p>
+                <p className="w-full text-sm leading-5 text-amber-600">
+                  {issues.length} Item{issues.length === 1 ? "" : "s"} need your attention
+                </p>
+              </div>
 
-          {/* Channel coverage */}
-          <div className="flex w-full flex-col items-start gap-[15px]">
-            <p className="w-full text-sm leading-5 font-semibold text-foreground">Channel Coverage</p>
-            <div className="flex w-full flex-col items-start gap-5">
-              {channelCoverage.map((channel) => (
-                <div key={channel.name} className="flex w-full items-center gap-2">
-                  <img
-                    src={channelLogos[channel.name]}
-                    alt=""
-                    className="size-5 shrink-0 rounded-sm object-cover"
-                  />
-                  <div className="flex flex-1 items-center gap-2">
-                    <p className="w-[100px] shrink-0 text-sm leading-5 text-foreground">{channel.name}</p>
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(2,6,23,0.2)]">
-                      <div className="h-full rounded-full bg-green-600" style={{ width: `${channel.value}%` }} />
+              <div className="flex w-full flex-col items-start overflow-hidden rounded-sm border border-border">
+                {statusRows.map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex w-full items-center justify-between border-b border-border px-4 py-3 last:border-b-0"
+                  >
+                    <div className="flex flex-col items-start gap-0.5">
+                      <p className="text-sm leading-5 font-medium text-foreground">{row.label}</p>
+                      <p className="text-xs leading-4 text-muted-foreground">{row.helper}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 text-xs leading-4 font-semibold text-secondary-foreground">
-                      {channel.value}%
+                    <span className="flex shrink-0 items-center justify-center rounded-full bg-secondary px-2.5 py-0.5 text-xs leading-4 font-semibold text-secondary-foreground">
+                      {row.value}
                     </span>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setReportOpen(true)}
-              className="flex items-center gap-1 rounded-lg py-1 text-sm leading-6 font-medium text-foreground hover:underline"
-            >
-              Full Report
-              <ArrowRight className="size-4" />
-            </button>
-          </div>
-        </div>
+            {/* Channel coverage */}
+            <div className="flex w-full flex-col items-start gap-[15px]">
+              <p className="w-full text-sm leading-5 font-semibold text-foreground">Channel Coverage</p>
+              <div className="flex w-full flex-col items-start gap-5">
+                {channelCoverage.map((channel) => (
+                  <div key={channel.name} className="flex w-full items-center gap-2">
+                    <img
+                      src={channelLogos[channel.name]}
+                      alt=""
+                      className="size-5 shrink-0 rounded-sm object-cover"
+                    />
+                    <div className="flex flex-1 items-center gap-2">
+                      <p className="w-[100px] shrink-0 text-sm leading-5 text-foreground">{channel.name}</p>
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(2,6,23,0.2)]">
+                        <div className="h-full rounded-full bg-green-600" style={{ width: `${channel.value}%` }} />
+                      </div>
+                      <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 text-xs leading-4 font-semibold text-secondary-foreground">
+                        {channel.value}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-        {/* Quick tip */}
-        <div className="flex w-full flex-col items-start gap-3 rounded-[10px] border border-amber-600/15 bg-amber-50 p-3">
-          <p className="w-full text-sm leading-5 text-amber-800">
-            {issues.length} item{issues.length === 1 ? "" : "s"} need attention. Review them before the next sync
-          </p>
-          <button
-            type="button"
-            onClick={() => setIssuesOpen(true)}
-            className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm leading-5 font-medium text-foreground hover:bg-muted"
-          >
-            Review Issues
-            <ArrowRight className="size-4" />
-          </button>
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="flex items-center gap-1 rounded-lg py-1 text-sm leading-6 font-medium text-foreground hover:underline"
+              >
+                Full Report
+                <ArrowRight className="size-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick tip */}
+          {issues.length > 0 && (
+            <div className="flex w-full flex-col items-start gap-3 rounded-[10px] border border-amber-600/15 bg-amber-50 p-3">
+              <p className="w-full text-sm leading-5 text-amber-800">
+                {issues.length} item{issues.length === 1 ? "" : "s"} need attention. Review them before the next sync
+              </p>
+              <button
+                type="button"
+                onClick={() => setIssuesOpen(true)}
+                className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm leading-5 font-medium text-foreground hover:bg-muted"
+              >
+                Review Issues
+                <ArrowRight className="size-4" />
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent>

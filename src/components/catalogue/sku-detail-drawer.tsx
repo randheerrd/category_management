@@ -14,6 +14,7 @@ import {
 import { UNLISTED_CATEGORY_ID, type StockStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { channelLogos } from "@/lib/channel-logos"
+import { ConfirmDialog } from "@/components/catalogue/confirm-dialog"
 
 /** Shared look for the two "select" triggers below — matches the old native <select>'s box. */
 const selectTriggerClasses =
@@ -34,6 +35,7 @@ export function SkuDetailDrawer() {
   const [weightGrams, setWeightGrams] = useState("")
   const [stock, setStock] = useState<StockStatus>("In Stock")
   const [pinTarget, setPinTarget] = useState("")
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   useEffect(() => {
     if (!sku) return
@@ -205,7 +207,7 @@ export function SkuDetailDrawer() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => deleteSku(sku.id)}
+            onClick={() => setConfirmDeleteOpen(true)}
             aria-label="Delete SKU"
             className="border-destructive/20 text-destructive hover:bg-destructive/10"
           >
@@ -219,6 +221,18 @@ export function SkuDetailDrawer() {
           </div>
         </SheetFooter>
       </SheetContent>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title={`Delete "${sku.name}"?`}
+        description="This can't be undone."
+        confirmLabel="Delete SKU"
+        onConfirm={() => {
+          deleteSku(sku.id)
+          closeSkuDetail()
+        }}
+      />
     </Sheet>
   )
 }

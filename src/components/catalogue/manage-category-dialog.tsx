@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { UNLISTED_CATEGORY_ID, type CategoryStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
+import { ConfirmDialog } from "@/components/catalogue/confirm-dialog"
 
 const statusOptions: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
 
@@ -24,6 +25,7 @@ export function ManageCategoryDialog() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<CategoryStatus>("Active")
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   useEffect(() => {
     if (!category) return
@@ -106,7 +108,7 @@ export function ManageCategoryDialog() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => deleteCategory(category.id)}
+              onClick={() => setConfirmDeleteOpen(true)}
               aria-label="Delete category"
               className="border-destructive/20 text-destructive hover:bg-destructive/10"
             >
@@ -123,6 +125,19 @@ export function ManageCategoryDialog() {
           </div>
         </div>
       </DialogContent>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title={`Delete "${category.title}"?`}
+        description={
+          category.skus.length > 0
+            ? `${category.skus.length} SKU${category.skus.length === 1 ? "" : "s"} will move to Unlisted. This can't be undone.`
+            : "This can't be undone."
+        }
+        confirmLabel="Delete category"
+        onConfirm={() => deleteCategory(category.id)}
+      />
     </Dialog>
   )
 }

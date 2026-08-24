@@ -23,6 +23,7 @@ function TextBarsCard() {
 }
 
 interface CatalogueEmptyStateProps {
+  /** "Add Manually" — loads the sample catalogue and moves past onboarding. */
   onAddManually: () => void
 }
 

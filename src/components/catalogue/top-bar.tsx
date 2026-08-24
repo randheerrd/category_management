@@ -1,8 +1,7 @@
 import { ListChecks, ChevronRight, Calendar as CalendarIcon, ChevronDown, FolderPlus, PackagePlus, UploadCloud } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,9 +12,9 @@ import { useCatalogue } from "@/lib/catalogue-context"
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 
-/** Breadcrumb + global date picker + create action. */
+/** Breadcrumb + last-synced timestamp + create action. */
 export function TopBar() {
-  const { date, setDate, openAddCategory, openAddProduct, openUploadCsv } = useCatalogue()
+  const { date, openAddCategory, openAddProduct, openUploadCsv } = useCatalogue()
 
   return (
     <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-border px-4 py-2.5">
@@ -29,20 +28,19 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Popover>
-          <PopoverTrigger className="flex h-8 w-40 items-center rounded-lg border border-input bg-background py-1.5 pr-3 pl-3 text-sm text-foreground">
-            <span className="flex-1 text-left">{dateFormatter.format(date)}</span>
-            <CalendarIcon className="size-4 text-foreground" />
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={(next) => next && setDate(next)}
-              defaultMonth={date}
-            />
-          </PopoverContent>
-        </Popover>
+        {/* Read-only — this reflects the catalogue's last sync, not a date to browse by
+            (there's no per-date history to filter against), so it isn't a picker. */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="flex h-8 w-40 cursor-default items-center rounded-lg border border-input bg-background py-1.5 pr-3 pl-3 text-sm text-foreground">
+                <span className="flex-1 text-left">{dateFormatter.format(date)}</span>
+                <CalendarIcon className="size-4 text-muted-foreground" />
+              </span>
+            }
+          />
+          <TooltipContent side="bottom">Last synced</TooltipContent>
+        </Tooltip>
 
         <div id="tour-create">
           <DropdownMenu>

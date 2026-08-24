@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 
 import {
   initialCategories,
+  demoCategories,
   makeSku,
   createSku,
   skuMatchesFilters,
@@ -69,7 +70,6 @@ interface CatalogueContextValue {
   moveSku: (skuId: string, fromCategoryId: string, toCategoryId: string) => void
   visibleCategories: Category[]
   date: Date
-  setDate: (date: Date) => void
   groupByCategory: boolean
   setGroupByCategory: (value: boolean) => void
   selectedSkuIds: Set<string>
@@ -104,6 +104,7 @@ interface CatalogueContextValue {
   openUploadCsv: () => void
   closeUploadCsv: () => void
   importCsvRows: (rows: CsvRow[]) => { skusImported: number; categoriesCreated: number; categoriesUpdated: number }
+  loadDemoCatalogue: () => void
 }
 
 const CatalogueContext = createContext<CatalogueContextValue | null>(null)
@@ -122,7 +123,8 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [grammageFilter, setGrammageFilter] = useState<Set<number>>(new Set())
   const [view, setViewState] = useState<BoardView>("grid")
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
-  const [date, setDate] = useState<Date>(new Date(2026, 7, 12))
+  // Read-only "last synced" timestamp — not a date to browse by (no per-date history exists to filter).
+  const [date] = useState<Date>(new Date(2026, 7, 12))
   const [groupByCategory, setGroupByCategory] = useState(true)
   const [selectedSkuIds, setSelectedSkuIds] = useState<Set<string>>(new Set())
   const [showAnalyticsPanel, setShowAnalyticsPanel] = useState(true)
@@ -135,6 +137,10 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
 
   const openUploadCsv = () => setUploadCsvOpen(true)
   const closeUploadCsv = () => setUploadCsvOpen(false)
+
+  // Onboarding's "Add Manually" — swaps the empty board for the sample catalogue so a
+  // new user has something real to explore instead of a blank Add-a-product form.
+  const loadDemoCatalogue = () => setCategories(demoCategories)
 
   // Groups parsed CSV rows by category title, creating any category that doesn't already
   // exist (case-insensitive match) and pinning a new SKU per row into it.
@@ -607,7 +613,6 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     moveSku,
     visibleCategories,
     date,
-    setDate,
     groupByCategory,
     setGroupByCategory,
     selectedSkuIds,
@@ -642,6 +647,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     openUploadCsv,
     closeUploadCsv,
     importCsvRows,
+    loadDemoCatalogue,
   }
 
   return <CatalogueContext.Provider value={value}>{children}</CatalogueContext.Provider>
