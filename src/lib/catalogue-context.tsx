@@ -7,6 +7,7 @@ import {
   createSku,
   skuMatchesFilters,
   UNLISTED_CATEGORY_ID,
+  type ActivityEntry,
   type Category,
   type CategorySku,
   type CategoryStatus,
@@ -105,9 +106,13 @@ interface CatalogueContextValue {
   closeUploadCsv: () => void
   importCsvRows: (rows: CsvRow[]) => { skusImported: number; categoriesCreated: number; categoriesUpdated: number }
   loadDemoCatalogue: () => void
+  /** Newest-first feed behind the health panel's "Recent Activity" — every create/move/delete logs one entry. */
+  activity: ActivityEntry[]
 }
 
 const CatalogueContext = createContext<CatalogueContextValue | null>(null)
+
+let activitySeq = 0
 
 export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>(initialCategories)
@@ -134,13 +139,27 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [addCategoryOpen, setAddCategoryOpen] = useState(false)
   const [manageCategoryId, setManageCategoryId] = useState<string | null>(null)
   const [uploadCsvOpen, setUploadCsvOpen] = useState(false)
+  const [activity, setActivity] = useState<ActivityEntry[]>([])
+
+  const logActivity = (message: string) => {
+    activitySeq += 1
+    setActivity((prev) => [{ id: `activity-${activitySeq}`, message, timestamp: Date.now() }, ...prev])
+  }
 
   const openUploadCsv = () => setUploadCsvOpen(true)
   const closeUploadCsv = () => setUploadCsvOpen(false)
 
   // Onboarding's "Add Manually" — swaps the empty board for the sample catalogue so a
   // new user has something real to explore instead of a blank Add-a-product form.
-  const loadDemoCatalogue = () => setCategories(demoCategories)
+  const loadDemoCatalogue = () => {
+    setCategories(demoCategories)
+    const dayMs = 24 * 60 * 60 * 1000
+    setActivity([
+      { id: "activity-demo-1", message: "Move Chile Limon 52g to Spicy", timestamp: Date.now() - 1 * dayMs },
+      { id: "activity-demo-2", message: "SKU added Protein Chips", timestamp: Date.now() - 2 * dayMs },
+      { id: "activity-demo-3", message: "Category created Beverages", timestamp: Date.now() - 5 * dayMs },
+    ])
+  }
 
   // Groups parsed CSV rows by category title, creating any category that doesn't already
   // exist (case-insensitive match) and pinning a new SKU per row into it.
@@ -186,6 +205,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast(`Imported ${rows.length} SKU${rows.length === 1 ? "" : "s"}`, {
       description: `${createdTitles.size} categor${createdTitles.size === 1 ? "y" : "ies"} created, ${updatedTitles.size} updated.`,
     })
+    logActivity(`Imported ${rows.length} SKU${rows.length === 1 ? "" : "s"} from CSV`)
 
     return { skusImported: rows.length, categoriesCreated: createdTitles.size, categoriesUpdated: updatedTitles.size }
   }
@@ -207,6 +227,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     ])
     setAddCategoryOpen(false)
     toast(`Created "${input.title}"`)
+    logActivity(`Category created ${input.title}`)
   }
 
   const openManageCategory = (categoryId: string) => setManageCategoryId(categoryId)
@@ -260,6 +281,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast.error(`Deleted "${target.title}"`, {
       description: target.skus.length > 0 ? `${target.skus.length} SKU(s) moved to Unlisted.` : undefined,
     })
+    logActivity(`Category deleted ${target.title}`)
   }
 
   const openAddProduct = (categoryId?: string) => {
@@ -279,6 +301,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast(`Added "${sku.name}"`, {
       description: `Pinned to ${categoryIds.length} categor${categoryIds.length === 1 ? "y" : "ies"}.`,
     })
+    logActivity(`SKU added ${sku.name}`)
   }
 
   const clearSelection = () => setSelectedSkuIds(new Set())
@@ -307,7 +330,10 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       })
     )
     setSelectedSkuId((current) => (current === skuId ? null : current))
-    if (sku) toast.error(`Deleted "${sku.name}"`)
+    if (sku) {
+      toast.error(`Deleted "${sku.name}"`)
+      logActivity(`SKU deleted ${sku.name}`)
+    }
   }
 
   const setView = (next: BoardView) => {
@@ -377,6 +403,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       prev.map((c) => (c.id === categoryId ? { ...c, itemCount: c.itemCount + 1, skus: [...c.skus, sku] } : c))
     )
     toast(`Added "${sku.name}"`)
+    logActivity(`SKU added ${sku.name}`)
   }
 
   const addCategory = () => {
@@ -392,6 +419,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       },
     ])
     toast('Created "New category"')
+    logActivity("Category created New category")
   }
 
   const moveSku = (skuId: string, fromCategoryId: string, toCategoryId: string) => {
@@ -412,12 +440,14 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       })
     )
     toast(`Moved "${sku.name}"`, { description: destination ? `To ${destination.title}` : undefined })
+    logActivity(destination ? `Move ${sku.name} to ${destination.title}` : `Move ${sku.name}`)
   }
 
   // "Move to" and "Add to Category" both resolve here — SKUs belong to a single
   // category in this data model, so both actions re-pin the SKU to the target.
   const bulkMoveToCategory = (skuIds: string[], toCategoryId: string) => {
     const destination = categories.find((c) => c.id === toCategoryId)
+    const movedSku = categories.flatMap((c) => c.skus).find((s) => s.id === skuIds[0])
     setCategories((prev) => {
       const idSet = new Set(skuIds)
       const moved: Category["skus"] = []
@@ -434,6 +464,12 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast(`Moved ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`, {
       description: destination ? `To ${destination.title}` : undefined,
     })
+    if (!destination) return
+    logActivity(
+      skuIds.length === 1 && movedSku
+        ? `Move ${movedSku.name} to ${destination.title}`
+        : `Move ${skuIds.length} SKUs to ${destination.title}`
+    )
   }
 
   // "Remove from category" doesn't orphan SKUs into the void — it moves them to the
@@ -455,6 +491,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast.error(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`, {
       description: "Moved to Unlisted.",
     })
+    logActivity(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`)
   }
 
   // "Move to" in the bulk selection bar can target a brand-new category — creates it and
@@ -648,6 +685,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     closeUploadCsv,
     importCsvRows,
     loadDemoCatalogue,
+    activity,
   }
 
   return <CatalogueContext.Provider value={value}>{children}</CatalogueContext.Provider>

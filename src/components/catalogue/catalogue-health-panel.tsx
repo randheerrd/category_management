@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { formatDistanceToNowStrict } from "date-fns"
 import { PanelLeft, ArrowRight, BarChart3 } from "lucide-react"
 
 import { ScoreRing } from "@/components/catalogue/score-ring"
@@ -11,6 +12,12 @@ import {
 } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { channelLogos } from "@/lib/channel-logos"
+import avatarFooter from "@/assets/avatar-footer.png"
+
+/** "1 day ago" / "5 days ago" — matches the design's relative timestamps. */
+function timeAgo(timestamp: number) {
+  return `${formatDistanceToNowStrict(timestamp)} ago`
+}
 
 /** Score-threshold label — the only place this wording is decided. */
 function scoreLabel(score: number) {
@@ -21,9 +28,10 @@ function scoreLabel(score: number) {
 
 /** Left rail summarizing overall catalogue health — collapses to a thin icon strip. */
 export function CatalogueHealthPanel() {
-  const { categories, setSearch, openSkuDetail, showAnalyticsPanel, toggleAnalyticsPanel } = useCatalogue()
+  const { categories, activity, setSearch, openSkuDetail, showAnalyticsPanel, toggleAnalyticsPanel } = useCatalogue()
   const [reportOpen, setReportOpen] = useState(false)
   const [issuesOpen, setIssuesOpen] = useState(false)
+  const [activityOpen, setActivityOpen] = useState(false)
 
   const score = computeHealthScore(categories)
   const statusRows = computeStatusBreakdown(categories)
@@ -158,22 +166,42 @@ export function CatalogueHealthPanel() {
             </div>
           </div>
 
-          {/* Quick tip */}
-          {issues.length > 0 && (
-            <div className="flex w-full flex-col items-start gap-3 rounded-[10px] border border-amber-600/15 bg-amber-50 p-3">
-              <p className="w-full text-sm leading-5 text-amber-800">
-                {issues.length} item{issues.length === 1 ? "" : "s"} need attention. Review them before the next sync
-              </p>
-              <button
-                type="button"
-                onClick={() => setIssuesOpen(true)}
-                className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm leading-5 font-medium text-foreground hover:bg-muted"
-              >
-                Review Issues
-                <ArrowRight className="size-4" />
-              </button>
-            </div>
-          )}
+          <div className="flex w-full flex-col items-start gap-4">
+            {/* Recent activity */}
+            {activity.length > 0 && (
+              <div className="flex w-full flex-col items-start gap-3 rounded-[10px] bg-muted/50 p-3">
+                <div className="flex w-full items-center justify-between">
+                  <p className="text-sm leading-5 font-semibold text-foreground">Recent Activity</p>
+                  {activity.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setActivityOpen(true)}
+                      className="flex items-center gap-1 rounded-lg py-1 text-sm leading-6 font-medium text-foreground hover:underline"
+                    >
+                      Show All
+                      <ArrowRight className="size-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex w-full flex-col items-start">
+                  {activity.slice(0, 3).map((entry, index, arr) => (
+                    <div key={entry.id} className="flex w-full items-stretch gap-3">
+                      <div className="flex shrink-0 flex-col items-center">
+                        <img src={avatarFooter} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+                        {index < arr.length - 1 && (
+                          <div className="my-1 w-px flex-1 border-l border-dashed border-border" />
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-0.5 pb-4">
+                        <p className="text-sm leading-5 font-medium text-foreground">{entry.message}</p>
+                        <p className="text-xs leading-4 text-muted-foreground">{timeAgo(entry.timestamp)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -306,6 +334,31 @@ export function CatalogueHealthPanel() {
                 )
               })
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recent activity</DialogTitle>
+            <DialogDescription>Every create, move, and delete across this catalogue.</DialogDescription>
+          </DialogHeader>
+          <div className="flex max-h-[60vh] flex-col items-start overflow-y-auto">
+            {activity.map((entry, index) => (
+              <div key={entry.id} className="flex w-full items-stretch gap-3">
+                <div className="flex shrink-0 flex-col items-center">
+                  <img src={avatarFooter} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+                  {index < activity.length - 1 && (
+                    <div className="my-1 w-px flex-1 border-l border-dashed border-border" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-0.5 pb-4">
+                  <p className="text-sm leading-5 font-medium text-foreground">{entry.message}</p>
+                  <p className="text-xs leading-4 text-muted-foreground">{timeAgo(entry.timestamp)}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </DialogContent>
       </Dialog>

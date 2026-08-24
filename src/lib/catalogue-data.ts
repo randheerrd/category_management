@@ -81,6 +81,14 @@ export interface Category {
   skus: CategorySku[]
 }
 
+/** One line in the Catalogue Health panel's "Recent Activity" feed. */
+export interface ActivityEntry {
+  id: string
+  message: string
+  /** epoch ms — kept as a number so it survives cheaply without a Date instance. */
+  timestamp: number
+}
+
 /** The one always-present catch-all category — SKUs with no real category live here:
  *  orphaned by a deleted category, or dragged in directly. Matched by this fixed id
  *  (not by title), so renaming it never breaks the mechanism, and it can't be deleted. */
