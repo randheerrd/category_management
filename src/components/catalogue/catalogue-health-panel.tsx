@@ -16,7 +16,6 @@ import {
 } from "lucide-react"
 
 import { ScoreRing } from "@/components/catalogue/score-ring"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   computeCatalogueIssues,
@@ -76,8 +75,6 @@ export function CatalogueHealthPanel() {
   const {
     categories,
     activity,
-    setSearch,
-    openSkuDetail,
     showAnalyticsPanel,
     toggleAnalyticsPanel,
     clearFilters,
@@ -86,8 +83,6 @@ export function CatalogueHealthPanel() {
     setCategoryFilterIds,
     setStatusFilterAll,
   } = useCatalogue()
-  const [reportOpen, setReportOpen] = useState(false)
-  const [issuesOpen, setIssuesOpen] = useState(false)
   const [activityOpen, setActivityOpen] = useState(false)
 
   const score = computeHealthScore(categories)
@@ -137,19 +132,6 @@ export function CatalogueHealthPanel() {
   const allSkus = categories.flatMap((c) => c.skus)
   const hasData = allSkus.length > 0
 
-  const stockCounts = {
-    "In Stock": allSkus.filter((s) => s.stock === "In Stock").length,
-    "Low Stock": allSkus.filter((s) => s.stock === "Low Stock").length,
-    "Out of Stock": allSkus.filter((s) => s.stock === "Out of Stock").length,
-  }
-
-  const openIssue = (issue: (typeof issues)[number]) => {
-    if (issue.type === "sku" && issue.skuId) openSkuDetail(issue.skuId)
-    else setSearch(issue.label)
-    setIssuesOpen(false)
-    setReportOpen(false)
-  }
-
   if (!showAnalyticsPanel) {
     return (
       <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-border">
@@ -197,8 +179,8 @@ export function CatalogueHealthPanel() {
           </div>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col justify-between overflow-y-auto px-4 py-5">
-          <div className="flex flex-col items-start gap-6">
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col justify-between overflow-y-auto px-4 py-5">
+          <div className="flex flex-col items-start gap-4">
             {/* Score + status */}
             <div className="flex w-full flex-col items-center gap-3">
               <ScoreRing score={score} />
@@ -250,15 +232,6 @@ export function CatalogueHealthPanel() {
                   </div>
                 ))}
               </div>
-
-              <button
-                type="button"
-                onClick={() => setReportOpen(true)}
-                className="flex items-center gap-1 rounded-lg py-1 text-sm leading-6 font-medium text-foreground hover:underline"
-              >
-                Full Report
-                <ArrowRight className="size-4" />
-              </button>
             </div>
           </div>
 
@@ -275,7 +248,6 @@ export function CatalogueHealthPanel() {
                       className="flex items-center gap-1 rounded-lg py-1 text-sm leading-6 font-medium text-foreground hover:underline"
                     >
                       Show All
-                      <ArrowRight className="size-4" />
                     </button>
                   )}
                 </div>
@@ -300,139 +272,6 @@ export function CatalogueHealthPanel() {
           </div>
         </div>
       )}
-
-      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Catalogue health — full report</DialogTitle>
-            <DialogDescription>Live snapshot across all pinned categories and channels.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 text-sm">
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase">Overview</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-muted-foreground">Categories</span>
-                  <span className="font-medium text-foreground">{categories.length}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-muted-foreground">Active</span>
-                  <span className="font-medium text-foreground">
-                    {categories.filter((c) => c.status === "Active").length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-muted-foreground">Planning</span>
-                  <span className="font-medium text-foreground">
-                    {categories.filter((c) => c.status === "Planning").length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-muted-foreground">Discontinued</span>
-                  <span className="font-medium text-foreground">
-                    {categories.filter((c) => c.status === "Discontinued").length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-muted-foreground">Total SKUs</span>
-                  <span className="font-medium text-foreground">{allSkus.length}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-muted-foreground">In Stock</span>
-                  <span className="font-medium text-foreground">{stockCounts["In Stock"]}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-muted-foreground">Low Stock</span>
-                  <span className="font-medium text-foreground">{stockCounts["Low Stock"]}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-muted-foreground">Out of Stock</span>
-                  <span className="font-medium text-foreground">{stockCounts["Out of Stock"]}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase">Channel coverage</p>
-              <div className="flex flex-col gap-2">
-                {channelCoverage.map((channel) => (
-                  <div key={channel.name} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                    <span className="text-muted-foreground">{channel.name}</span>
-                    <span className="font-medium text-foreground">{channel.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {issues.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Top issues</p>
-                <div className="flex flex-col gap-1.5">
-                  {issues.slice(0, 5).map((issue) => (
-                    <button
-                      key={issue.id}
-                      onClick={() => openIssue(issue)}
-                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-left hover:bg-muted"
-                    >
-                      <span className="font-medium text-foreground">{issue.label}</span>
-                      <span className="text-muted-foreground">{issue.helper}</span>
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReportOpen(false)
-                    setIssuesOpen(true)
-                  }}
-                  className="flex w-fit items-center gap-1 text-sm font-medium text-foreground hover:underline"
-                >
-                  View all {issues.length}
-                  <ArrowRight className="size-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={issuesOpen} onOpenChange={setIssuesOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Items that need attention</DialogTitle>
-            <DialogDescription>Planning-stage or understaffed categories, plus SKUs low on stock or coverage.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
-            {issues.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing needs attention right now.</p>
-            ) : (
-              (["category", "sku"] as const).map((type) => {
-                const group = issues.filter((issue) => issue.type === type)
-                if (group.length === 0) return null
-                return (
-                  <div key={type} className="flex flex-col gap-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                      {type === "category" ? "Categories" : "SKUs"}
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      {group.map((issue) => (
-                        <button
-                          key={issue.id}
-                          onClick={() => openIssue(issue)}
-                          className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-left text-sm hover:bg-muted"
-                        >
-                          <span className="font-medium text-foreground">{issue.label}</span>
-                          <span className="text-muted-foreground">{issue.helper}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Sheet open={activityOpen} onOpenChange={setActivityOpen}>
         <SheetContent showCloseButton>

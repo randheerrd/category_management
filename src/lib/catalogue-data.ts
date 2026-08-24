@@ -1,7 +1,10 @@
 import { products, findProductImageByName, type Product } from "@/lib/products"
 import { darkStoreLocations } from "@/lib/dark-store-locations"
 
-export type StockStatus = "In Stock" | "Low Stock" | "Out of Stock"
+/** Freeform — the 3 built-ins below are still the only ones with special meaning
+ *  (see computeSkuHealthCounts), but a user can type and create any other value. */
+export type StockStatus = string
+export const BUILT_IN_STOCK_STATUSES: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 
 export interface DarkStoreAvailability {
   name: string
@@ -28,10 +31,12 @@ export interface CategorySku {
   stockedStoreIds: string[]
 }
 
-/** Picks a random subset of the real dark store list — each SKU gets its own overall
- *  fill rate (sometimes near-empty, sometimes fully stocked, usually in between) so
- *  coverage genuinely varies SKU to SKU instead of every product looking the same. */
+/** A healthy demo catalogue should mostly read as healthy — most SKUs are fully stocked
+ *  everywhere, with a small realistic minority left partial/near-empty so the health
+ *  panel's issues list still has real things to catch. Same shape as before (a random
+ *  subset of the real dark store list), just biased toward full instead of uniform. */
 function randomStockedStoreIds(): string[] {
+  if (Math.random() < 0.95) return darkStoreLocations.map((store) => store.id)
   const fillRate = Math.random()
   return darkStoreLocations.filter(() => Math.random() < fillRate).map((store) => store.id)
 }
@@ -53,9 +58,14 @@ export function computeDarkStoreAvailability(stockedStoreIds: string[]): DarkSto
 /** Derived from a SKU's own dark-store breakdown — no separate "coverage" field is stored. */
 export type CoverageLevel = "any" | "none" | "partial" | "full"
 
+/** Only counts the channels a SKU is actually assigned to via `platforms` — a SKU
+ *  listed on just Blinkit shouldn't need stores on Zepto/Instamart/etc. to read as
+ *  "full" coverage. Un-assigned channels don't count against it either way. */
 export function skuCoverageLevel(sku: CategorySku): Exclude<CoverageLevel, "any"> {
-  const filled = sku.darkStoreAvailability.reduce((sum, c) => sum + c.filled, 0)
-  const total = sku.darkStoreAvailability.reduce((sum, c) => sum + c.total, 0)
+  const assigned = new Set(sku.platforms)
+  const relevant = sku.darkStoreAvailability.filter((c) => assigned.has(c.name))
+  const filled = relevant.reduce((sum, c) => sum + c.filled, 0)
+  const total = relevant.reduce((sum, c) => sum + c.total, 0)
   if (total === 0 || filled === 0) return "none"
   if (filled === total) return "full"
   return "partial"
@@ -90,7 +100,25 @@ export function skuMatchesFilters(sku: CategorySku, filters: SkuFilters): boolea
   return true
 }
 
-export type CategoryStatus = "Active" | "Planning" | "Discontinued"
+/** Freeform — "Planning" and "Discontinued" are still the only ones with special
+ *  meaning (draft/excluded in the health math below); any other value behaves like
+ *  "Active". A user can type and create custom statuses beyond the 3 built-ins. */
+export type CategoryStatus = string
+export const BUILT_IN_CATEGORY_STATUSES: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
+
+/** Options for a status picker: built-ins first (stable order), then any custom
+ *  values already in use on a category — so a status someone typed once stays
+ *  pickable later without a separate "remembered options" store. */
+export function categoryStatusOptions(categories: Category[]): CategoryStatus[] {
+  const extra = categories.map((c) => c.status).filter((s) => !BUILT_IN_CATEGORY_STATUSES.includes(s))
+  return [...BUILT_IN_CATEGORY_STATUSES, ...new Set(extra)]
+}
+
+/** Same idea as categoryStatusOptions, but for SKU stock values. */
+export function stockStatusOptions(categories: Category[]): StockStatus[] {
+  const extra = categories.flatMap((c) => c.skus.map((s) => s.stock)).filter((s) => !BUILT_IN_STOCK_STATUSES.includes(s))
+  return [...BUILT_IN_STOCK_STATUSES, ...new Set(extra)]
+}
 
 export interface Category {
   id: string
@@ -141,6 +169,10 @@ export function makeSku(product: Product): CategorySku {
   const darkStoreAvailability = computeDarkStoreAvailability(stockedStoreIds)
   const filled = stockedStoreIds.length
   const total = darkStoreLocations.length
+  // Fully-covered SKUs are genuinely in stock — stock and coverage aren't drawn
+  // independently, otherwise a random Low/Out-of-Stock pick would keep diluting the
+  // "live" bucket even for SKUs that are actually fully stocked everywhere.
+  const stock: StockStatus = filled === total ? "In Stock" : stockCycle[(skuSeq - 1) % stockCycle.length]
   return {
     id: `sku-${skuSeq}`,
     name: product.name,
@@ -154,7 +186,7 @@ export function makeSku(product: Product): CategorySku {
     mrp: product.price + Math.max(1, Math.round(product.price * 0.1)),
     platforms: [platformCycle[(skuSeq - 1) % platformCycle.length]],
     darkStores: `${filled}/${total}`,
-    stock: stockCycle[(skuSeq - 1) % stockCycle.length],
+    stock,
     darkStoreAvailability,
     stockedStoreIds,
   }

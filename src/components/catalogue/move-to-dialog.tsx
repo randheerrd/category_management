@@ -5,13 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import type { CategoryStatus } from "@/lib/catalogue-data"
+import { StatusCombobox } from "@/components/catalogue/status-combobox"
+import { categoryStatusOptions, type CategoryStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 const selectTriggerClasses =
   "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-
-const statusOptions: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
 
 type Step = "pick" | "create"
 
@@ -229,17 +228,12 @@ export function MoveToDialog({ open, onOpenChange, skuIds }: MoveToDialogProps) 
 
               <label className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Status</span>
-                <select
+                <StatusCombobox
                   value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as CategoryStatus)}
-                  className="flex h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(next) => setNewStatus(next as CategoryStatus)}
+                  options={categoryStatusOptions(categories)}
+                  searchPlaceholder="Search or create status"
+                />
               </label>
             </div>
 

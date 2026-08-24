@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, ChevronDown, Plus, Search, Trash2, X } from "lucide-react"
+import { Check, ChevronDown, Plus, Search, Trash2, Upload, X } from "lucide-react"
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -9,12 +9,17 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { UNLISTED_CATEGORY_ID, channelNames, computeDarkStoreAvailability, type StockStatus } from "@/lib/catalogue-data"
+import { StatusCombobox } from "@/components/catalogue/status-combobox"
+import {
+  UNLISTED_CATEGORY_ID,
+  channelNames,
+  computeDarkStoreAvailability,
+  stockStatusOptions,
+  type StockStatus,
+} from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { darkStoreLocations } from "@/lib/dark-store-locations"
 import { ConfirmDialog } from "@/components/catalogue/confirm-dialog"
@@ -22,8 +27,6 @@ import { ConfirmDialog } from "@/components/catalogue/confirm-dialog"
 /** Shared look for the two "select" triggers below — matches the old native <select>'s box. */
 const selectTriggerClasses =
   "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-
-const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 
 /** Right-side drawer for viewing and editing a single SKU. */
 export function SkuDetailDrawer() {
@@ -172,9 +175,18 @@ export function SkuDetailDrawer() {
           />
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="mx-auto flex size-24 cursor-pointer flex-col items-center justify-center gap-2 self-center"
+            className="group/image relative mx-auto size-[60px] shrink-0 cursor-pointer self-center"
           >
-            <img src={image ?? sku.image} alt="" className="size-24 rounded-lg border border-border object-cover" />
+            <img
+              src={image ?? sku.image}
+              alt=""
+              className="size-[60px] rounded-[4px] border border-border object-cover"
+            />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[4px] bg-black/40 opacity-0 transition-opacity group-hover/image:opacity-100">
+              <span className="flex size-6 items-center justify-center rounded-full bg-[rgba(241,245,249,0.8)]">
+                <Upload className="size-4 text-slate-950/50" />
+              </span>
+            </div>
           </div>
           <div className="-mt-3 flex flex-col items-center gap-0.5 text-center">
             <p className="text-sm font-medium text-foreground">Upload Image</p>
@@ -306,25 +318,12 @@ export function SkuDetailDrawer() {
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm text-muted-foreground">Status</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button type="button" className={selectTriggerClasses}>
-                      <span>{stock}</span>
-                      <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  }
-                />
-                <DropdownMenuContent align="start">
-                  <DropdownMenuRadioGroup value={stock} onValueChange={(value) => setStock(value as StockStatus)}>
-                    {stockOptions.map((option) => (
-                      <DropdownMenuRadioItem key={option} value={option}>
-                        {option}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <StatusCombobox
+                value={stock}
+                onChange={(next) => setStock(next as StockStatus)}
+                options={stockStatusOptions(categories)}
+                searchPlaceholder="Search or create status"
+              />
             </label>
           </div>
 

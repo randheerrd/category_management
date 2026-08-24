@@ -9,17 +9,14 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import type { StockStatus } from "@/lib/catalogue-data"
+import { StatusCombobox } from "@/components/catalogue/status-combobox"
+import { stockStatusOptions, type StockStatus } from "@/lib/catalogue-data"
 import { channelNames } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { darkStoreLocations } from "@/lib/dark-store-locations"
-
-const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 
 const selectTriggerClasses =
   "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -330,25 +327,12 @@ export function AddProductDialog({ onCreated }: AddProductDialogProps = {}) {
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm text-muted-foreground">Status</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button type="button" className={selectTriggerClasses}>
-                      <span>{stock}</span>
-                      <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  }
-                />
-                <DropdownMenuContent align="start">
-                  <DropdownMenuRadioGroup value={stock} onValueChange={(value) => setStock(value as StockStatus)}>
-                    {stockOptions.map((option) => (
-                      <DropdownMenuRadioItem key={option} value={option}>
-                        {option}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <StatusCombobox
+                value={stock}
+                onChange={(next) => setStock(next as StockStatus)}
+                options={stockStatusOptions(categories)}
+                searchPlaceholder="Search or create status"
+              />
             </label>
           </div>
 

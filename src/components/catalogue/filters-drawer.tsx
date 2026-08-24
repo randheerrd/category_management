@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { CategoryStatus, StockStatus } from "@/lib/catalogue-data"
-import { channelNames } from "@/lib/catalogue-data"
+import { categoryStatusOptions, channelNames, stockStatusOptions } from "@/lib/catalogue-data"
 import { darkStoreCities, darkStoreLocations } from "@/lib/dark-store-locations"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { categoryDotClass } from "@/lib/category-colors"
@@ -49,9 +49,6 @@ function SelectedChips<T extends string>({
     </div>
   )
 }
-
-const statuses: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
-const stockStatuses: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 
 const selectTriggerClass =
   "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -414,6 +411,11 @@ export function FiltersDrawer() {
     setGrammageFilterAll,
     countMatchingSkus,
   } = useCatalogue()
+
+  // Built-ins plus whatever custom status/stock values are actually in use, so a
+  // status someone typed into a Notion-style combobox elsewhere shows up here too.
+  const statuses = useMemo(() => categoryStatusOptions(categories), [categories])
+  const stockStatuses = useMemo(() => stockStatusOptions(categories), [categories])
 
   const [open, setOpen] = useState(false)
   const [draftCategoryIds, setDraftCategoryIds] = useState<Set<string>>(new Set())

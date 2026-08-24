@@ -127,3 +127,23 @@
     @apply font-sans;
     }
 }
+
+/* A thin, always-visible scrollbar for panels whose content can overflow (e.g. the
+   Catalogue Health rail) — macOS's default overlay scrollbar hides itself until you're
+   actively scrolling, which makes clipped content look broken instead of scrollable. */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+}

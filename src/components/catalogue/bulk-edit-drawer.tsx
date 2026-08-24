@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, ChevronDown, Plus, Search, X } from "lucide-react"
+import { AlertTriangle, Check, ChevronDown, Plus, Search, X } from "lucide-react"
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -9,19 +9,16 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { channelNames, type CategorySku, type StockStatus } from "@/lib/catalogue-data"
+import { channelNames, stockStatusOptions, type CategorySku, type StockStatus } from "@/lib/catalogue-data"
+import { StatusCombobox } from "@/components/catalogue/status-combobox"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { darkStoreLocations } from "@/lib/dark-store-locations"
 
 const selectTriggerClasses =
   "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-
-const stockOptions: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
 
 interface BulkEditDrawerProps {
   open: boolean
@@ -179,9 +176,12 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
           </button>
         </SheetHeader>
 
-        <div className="shrink-0 border-b border-destructive/20 bg-destructive/5 px-4 py-3 text-sm leading-5 text-destructive">
-          Editing will replace the existing data with the new details from Scratch. Please review the changes
-          carefully before proceeding.
+        <div className="flex shrink-0 items-start gap-2 border-b border-amber-600/20 bg-amber-50 px-4 py-3 text-sm leading-5 text-amber-800">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Editing will replace the existing data with the new details from Scratch. Please review the changes
+            carefully before proceeding.
+          </span>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
@@ -342,25 +342,13 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm text-muted-foreground">Status</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button type="button" className={selectTriggerClasses}>
-                      <span className={stock ? "" : "text-muted-foreground"}>{stock || "No change"}</span>
-                      <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  }
-                />
-                <DropdownMenuContent align="start">
-                  <DropdownMenuRadioGroup value={stock} onValueChange={(value) => setStock(value as StockStatus)}>
-                    {stockOptions.map((option) => (
-                      <DropdownMenuRadioItem key={option} value={option}>
-                        {option}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <StatusCombobox
+                value={stock}
+                onChange={(next) => setStock(next as StockStatus)}
+                options={stockStatusOptions(categories)}
+                placeholder="No change"
+                searchPlaceholder="Search or create status"
+              />
             </label>
           </div>
 

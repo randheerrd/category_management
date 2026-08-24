@@ -23,9 +23,6 @@ export interface CsvParseResult {
 
 const HEADERS = ["Category", "SKU Name", "Price", "MRP", "Weight (g)", "Platform", "Stock", "Status"] as const
 
-const stockValues: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
-const statusValues: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
-
 export const CSV_TEMPLATE = [
   HEADERS.join(","),
   "Baked / Better-for-you,Lay's Classic Salted,20,22,140,Amazon,In Stock,Active",
@@ -103,8 +100,10 @@ export function parseCatalogueCsv(text: string): CsvParseResult {
     }
     const mrp = Number(mrpRaw)
 
-    const stock = stockValues.includes(stockRaw as StockStatus) ? (stockRaw as StockStatus) : "In Stock"
-    const status = statusValues.includes(statusRaw as CategoryStatus) ? (statusRaw as CategoryStatus) : "Active"
+    // Status/stock are freeform now — whatever the row says is a valid custom value,
+    // we just need a fallback for a blank cell.
+    const stock = stockRaw?.trim() || "In Stock"
+    const status = statusRaw?.trim() || "Active"
 
     rows.push({
       category: category.trim(),
