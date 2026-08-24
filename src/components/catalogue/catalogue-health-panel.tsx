@@ -1,22 +1,56 @@
 import { useState } from "react"
 import { formatDistanceToNowStrict } from "date-fns"
-import { PanelLeft, ArrowRight, BarChart3 } from "lucide-react"
+import {
+  PanelLeft,
+  ArrowRight,
+  BarChart3,
+  PackagePlus,
+  ArrowRightLeft,
+  FolderMinus,
+  Trash2,
+  FolderPlus,
+  FolderX,
+  UploadCloud,
+  type LucideIcon,
+} from "lucide-react"
 
 import { ScoreRing } from "@/components/catalogue/score-ring"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import {
   computeCatalogueIssues,
   computeChannelCoverage,
   computeHealthScore,
   computeStatusBreakdown,
+  type ActivityType,
 } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { channelLogos } from "@/lib/channel-logos"
-import avatarFooter from "@/assets/avatar-footer.png"
 
 /** "1 day ago" / "5 days ago" — matches the design's relative timestamps. */
 function timeAgo(timestamp: number) {
   return `${formatDistanceToNowStrict(timestamp)} ago`
+}
+
+/** Icon + accent color per activity type — lets the feed read at a glance instead of
+ *  relying on a generic avatar for every row. */
+const activityIconMeta: Record<ActivityType, { icon: LucideIcon; className: string }> = {
+  add: { icon: PackagePlus, className: "bg-emerald-600/10 text-emerald-700" },
+  move: { icon: ArrowRightLeft, className: "bg-indigo-600/10 text-indigo-700" },
+  remove: { icon: FolderMinus, className: "bg-amber-600/10 text-amber-700" },
+  delete: { icon: Trash2, className: "bg-red-600/10 text-red-700" },
+  "category-create": { icon: FolderPlus, className: "bg-emerald-600/10 text-emerald-700" },
+  "category-delete": { icon: FolderX, className: "bg-red-600/10 text-red-700" },
+  import: { icon: UploadCloud, className: "bg-sky-600/10 text-sky-700" },
+}
+
+function ActivityIcon({ type }: { type: ActivityType }) {
+  const { icon: Icon, className } = activityIconMeta[type]
+  return (
+    <div className={`flex size-8 shrink-0 items-center justify-center rounded-full ${className}`}>
+      <Icon className="size-4" />
+    </div>
+  )
 }
 
 /** Score-threshold label — the only place this wording is decided. */
@@ -154,15 +188,6 @@ export function CatalogueHealthPanel() {
                   </div>
                 ))}
               </div>
-
-              <button
-                type="button"
-                onClick={() => setReportOpen(true)}
-                className="flex items-center gap-1 rounded-lg py-1 text-sm leading-6 font-medium text-foreground hover:underline"
-              >
-                Full Report
-                <ArrowRight className="size-4" />
-              </button>
             </div>
           </div>
 
@@ -172,7 +197,7 @@ export function CatalogueHealthPanel() {
               <div className="flex w-full flex-col items-start gap-3 rounded-[10px] bg-muted/50 p-3">
                 <div className="flex w-full items-center justify-between">
                   <p className="text-sm leading-5 font-semibold text-foreground">Recent Activity</p>
-                  {activity.length > 0 && (
+                  {activity.length > 3 && (
                     <button
                       type="button"
                       onClick={() => setActivityOpen(true)}
@@ -187,7 +212,7 @@ export function CatalogueHealthPanel() {
                   {activity.slice(0, 3).map((entry, index, arr) => (
                     <div key={entry.id} className="flex w-full items-stretch gap-3">
                       <div className="flex shrink-0 flex-col items-center">
-                        <img src={avatarFooter} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+                        <ActivityIcon type={entry.type} />
                         {index < arr.length - 1 && (
                           <div className="my-1 w-px flex-1 border-l border-dashed border-border" />
                         )}
@@ -338,18 +363,18 @@ export function CatalogueHealthPanel() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Recent activity</DialogTitle>
-            <DialogDescription>Every create, move, and delete across this catalogue.</DialogDescription>
-          </DialogHeader>
-          <div className="flex max-h-[60vh] flex-col items-start overflow-y-auto">
-            {activity.map((entry, index) => (
+      <Sheet open={activityOpen} onOpenChange={setActivityOpen}>
+        <SheetContent showCloseButton className="sm:max-w-[400px]">
+          <SheetHeader className="flex-col items-start gap-1 pr-10">
+            <SheetTitle>Recent activity</SheetTitle>
+            <SheetDescription>The last {Math.min(activity.length, 20)} changes across this catalogue.</SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col items-start overflow-y-auto p-4">
+            {activity.slice(0, 20).map((entry, index, arr) => (
               <div key={entry.id} className="flex w-full items-stretch gap-3">
                 <div className="flex shrink-0 flex-col items-center">
-                  <img src={avatarFooter} alt="" className="size-8 shrink-0 rounded-full object-cover" />
-                  {index < activity.length - 1 && (
+                  <ActivityIcon type={entry.type} />
+                  {index < arr.length - 1 && (
                     <div className="my-1 w-px flex-1 border-l border-dashed border-border" />
                   )}
                 </div>
@@ -360,8 +385,8 @@ export function CatalogueHealthPanel() {
               </div>
             ))}
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

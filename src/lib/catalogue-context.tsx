@@ -8,6 +8,7 @@ import {
   skuMatchesFilters,
   UNLISTED_CATEGORY_ID,
   type ActivityEntry,
+  type ActivityType,
   type Category,
   type CategorySku,
   type CategoryStatus,
@@ -141,9 +142,9 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [uploadCsvOpen, setUploadCsvOpen] = useState(false)
   const [activity, setActivity] = useState<ActivityEntry[]>([])
 
-  const logActivity = (message: string) => {
+  const logActivity = (message: string, type: ActivityType) => {
     activitySeq += 1
-    setActivity((prev) => [{ id: `activity-${activitySeq}`, message, timestamp: Date.now() }, ...prev])
+    setActivity((prev) => [{ id: `activity-${activitySeq}`, type, message, timestamp: Date.now() }, ...prev])
   }
 
   const openUploadCsv = () => setUploadCsvOpen(true)
@@ -155,9 +156,9 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     setCategories(demoCategories)
     const dayMs = 24 * 60 * 60 * 1000
     setActivity([
-      { id: "activity-demo-1", message: "Move Chile Limon 52g to Spicy", timestamp: Date.now() - 1 * dayMs },
-      { id: "activity-demo-2", message: "SKU added Protein Chips", timestamp: Date.now() - 2 * dayMs },
-      { id: "activity-demo-3", message: "Category created Beverages", timestamp: Date.now() - 5 * dayMs },
+      { id: "activity-demo-1", type: "move", message: "Move Chile Limon 52g to Spicy", timestamp: Date.now() - 1 * dayMs },
+      { id: "activity-demo-2", type: "add", message: "SKU added Protein Chips", timestamp: Date.now() - 2 * dayMs },
+      { id: "activity-demo-3", type: "category-create", message: "Category created Beverages", timestamp: Date.now() - 5 * dayMs },
     ])
   }
 
@@ -205,7 +206,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast(`Imported ${rows.length} SKU${rows.length === 1 ? "" : "s"}`, {
       description: `${createdTitles.size} categor${createdTitles.size === 1 ? "y" : "ies"} created, ${updatedTitles.size} updated.`,
     })
-    logActivity(`Imported ${rows.length} SKU${rows.length === 1 ? "" : "s"} from CSV`)
+    logActivity(`Imported ${rows.length} SKU${rows.length === 1 ? "" : "s"} from CSV`, "import")
 
     return { skusImported: rows.length, categoriesCreated: createdTitles.size, categoriesUpdated: updatedTitles.size }
   }
@@ -227,7 +228,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     ])
     setAddCategoryOpen(false)
     toast(`Created "${input.title}"`)
-    logActivity(`Category created ${input.title}`)
+    logActivity(`Category created ${input.title}`, "category-create")
   }
 
   const openManageCategory = (categoryId: string) => setManageCategoryId(categoryId)
@@ -281,7 +282,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast.error(`Deleted "${target.title}"`, {
       description: target.skus.length > 0 ? `${target.skus.length} SKU(s) moved to Unlisted.` : undefined,
     })
-    logActivity(`Category deleted ${target.title}`)
+    logActivity(`Category deleted ${target.title}`, "category-delete")
   }
 
   const openAddProduct = (categoryId?: string) => {
@@ -301,7 +302,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast(`Added "${sku.name}"`, {
       description: `Pinned to ${categoryIds.length} categor${categoryIds.length === 1 ? "y" : "ies"}.`,
     })
-    logActivity(`SKU added ${sku.name}`)
+    logActivity(`SKU added ${sku.name}`, "add")
   }
 
   const clearSelection = () => setSelectedSkuIds(new Set())
@@ -332,7 +333,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     setSelectedSkuId((current) => (current === skuId ? null : current))
     if (sku) {
       toast.error(`Deleted "${sku.name}"`)
-      logActivity(`SKU deleted ${sku.name}`)
+      logActivity(`SKU deleted ${sku.name}`, "delete")
     }
   }
 
@@ -403,7 +404,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       prev.map((c) => (c.id === categoryId ? { ...c, itemCount: c.itemCount + 1, skus: [...c.skus, sku] } : c))
     )
     toast(`Added "${sku.name}"`)
-    logActivity(`SKU added ${sku.name}`)
+    logActivity(`SKU added ${sku.name}`, "add")
   }
 
   const addCategory = () => {
@@ -419,7 +420,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       },
     ])
     toast('Created "New category"')
-    logActivity("Category created New category")
+    logActivity("Category created New category", "category-create")
   }
 
   const moveSku = (skuId: string, fromCategoryId: string, toCategoryId: string) => {
@@ -440,7 +441,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       })
     )
     toast(`Moved "${sku.name}"`, { description: destination ? `To ${destination.title}` : undefined })
-    logActivity(destination ? `Move ${sku.name} to ${destination.title}` : `Move ${sku.name}`)
+    logActivity(destination ? `Move ${sku.name} to ${destination.title}` : `Move ${sku.name}`, "move")
   }
 
   // "Move to" and "Add to Category" both resolve here — SKUs belong to a single
@@ -468,7 +469,8 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     logActivity(
       skuIds.length === 1 && movedSku
         ? `Move ${movedSku.name} to ${destination.title}`
-        : `Move ${skuIds.length} SKUs to ${destination.title}`
+        : `Move ${skuIds.length} SKUs to ${destination.title}`,
+      "move"
     )
   }
 
@@ -491,7 +493,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     toast.error(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`, {
       description: "Moved to Unlisted.",
     })
-    logActivity(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`)
+    logActivity(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`, "remove")
   }
 
   // "Move to" in the bulk selection bar can target a brand-new category — creates it and

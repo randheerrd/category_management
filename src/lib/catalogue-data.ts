@@ -95,9 +95,20 @@ export interface Category {
   skus: CategorySku[]
 }
 
+/** What kind of change an activity entry logs — drives which icon it renders with. */
+export type ActivityType =
+  | "add"
+  | "move"
+  | "remove"
+  | "delete"
+  | "category-create"
+  | "category-delete"
+  | "import"
+
 /** One line in the Catalogue Health panel's "Recent Activity" feed. */
 export interface ActivityEntry {
   id: string
+  type: ActivityType
   message: string
   /** epoch ms — kept as a number so it survives cheaply without a Date instance. */
   timestamp: number
