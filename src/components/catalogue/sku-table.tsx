@@ -199,12 +199,14 @@ export function SkuTable() {
         const existing = byName.get(sku.name)
         if (existing) {
           existing.skuIds.push(sku.id)
-          if (!existing.platforms.includes(sku.platform)) existing.platforms.push(sku.platform)
+          for (const platform of sku.platforms) {
+            if (!existing.platforms.includes(platform)) existing.platforms.push(platform)
+          }
         } else {
           byName.set(sku.name, {
             sku,
             skuIds: [sku.id],
-            platforms: [sku.platform],
+            platforms: [...sku.platforms],
           })
         }
       }
@@ -280,7 +282,7 @@ export function SkuTable() {
                       category.skus.map((sku) => (
                         <ProductRow
                           key={sku.id}
-                          row={{ sku, skuIds: [sku.id], platforms: [sku.platform], categoryId: category.id }}
+                          row={{ sku, skuIds: [sku.id], platforms: sku.platforms, categoryId: category.id }}
                           {...dragHandlers}
                         />
                       ))}

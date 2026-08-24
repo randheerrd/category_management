@@ -17,7 +17,8 @@ export interface CategorySku {
   weightGrams: number
   stores: number
   mrp: number
-  platform: string
+  /** Every quick-commerce channel this SKU is actually listed on — can be more than one. */
+  platforms: string[]
   darkStores: string
   stock: StockStatus
   darkStoreAvailability: DarkStoreAvailability[]
@@ -74,7 +75,7 @@ export interface SkuFilters {
 export function skuMatchesFilters(sku: CategorySku, filters: SkuFilters): boolean {
   if (filters.productNameFilter.size > 0 && !filters.productNameFilter.has(sku.name)) return false
   if (filters.stockStatusFilter.size > 0 && !filters.stockStatusFilter.has(sku.stock)) return false
-  if (filters.platformFilter.size > 0 && !filters.platformFilter.has(sku.platform)) return false
+  if (filters.platformFilter.size > 0 && !sku.platforms.some((p) => filters.platformFilter.has(p))) return false
   if (
     filters.darkStoreFilter.size > 0 &&
     !sku.darkStoreAvailability.some((store) => filters.darkStoreFilter.has(store.name) && store.filled > 0)
@@ -149,7 +150,7 @@ export function makeSku(product: Product): CategorySku {
     // same stocked-store list, so they always agree with the detail drawer.
     stores: filled,
     mrp: product.price + Math.max(1, Math.round(product.price * 0.1)),
-    platform: platformCycle[(skuSeq - 1) % platformCycle.length],
+    platforms: [platformCycle[(skuSeq - 1) % platformCycle.length]],
     darkStores: `${filled}/${total}`,
     stock: stockCycle[(skuSeq - 1) % stockCycle.length],
     darkStoreAvailability,
@@ -186,7 +187,7 @@ export function createSku(input: NewProductInput): CategorySku {
     weightGrams: input.weightGrams,
     stores: filled,
     mrp: input.mrp,
-    platform: input.platform,
+    platforms: [input.platform],
     darkStores: `${filled}/${total}`,
     stock: input.stock,
     darkStoreAvailability,

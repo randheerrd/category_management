@@ -313,7 +313,7 @@ export function FiltersDrawer() {
   const [draftGrammages, setDraftGrammages] = useState<Set<string>>(new Set())
 
   const platforms = useMemo(() => {
-    const fromTable = categories.flatMap((category) => category.skus.map((sku) => sku.platform))
+    const fromTable = categories.flatMap((category) => category.skus.flatMap((sku) => sku.platforms))
     return [...new Set([...channelNames, ...fromTable])].filter(Boolean)
   }, [categories])
 

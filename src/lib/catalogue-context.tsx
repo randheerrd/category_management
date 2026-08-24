@@ -664,7 +664,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
         const matchesCategory = queryTokens.every((token) => categoryHaystack.includes(token))
         const matchesSku = category.skus.some((sku) => {
           const skuHaystack = normalize(
-            `${sku.name} ${sku.platform} ${sku.stock} ${sku.price} ${sku.mrp} ${sku.weightGrams}`
+            `${sku.name} ${sku.platforms.join(" ")} ${sku.stock} ${sku.price} ${sku.mrp} ${sku.weightGrams}`
           )
           return queryTokens.every((token) => skuHaystack.includes(token))
         })
