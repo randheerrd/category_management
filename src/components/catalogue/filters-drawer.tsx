@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Check, ChevronDown, ListFilter, Search } from "lucide-react"
+import { Check, ChevronDown, ListFilter, Search, X } from "lucide-react"
 
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,38 @@ import { darkStoreCities, darkStoreLocations } from "@/lib/dark-store-locations"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { categoryDotClass } from "@/lib/category-colors"
 import { toast } from "@/lib/toast"
+
+/** Removable-pill row shown under a multi-select trigger — same look used across the SKU
+ *  drawer, Move to, etc. for "here's what's picked". */
+function SelectedChips<T extends string>({
+  items,
+  onRemove,
+}: {
+  items: { value: T; label: string }[]
+  onRemove: (value: T) => void
+}) {
+  if (items.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {items.map((item) => (
+        <span
+          key={item.value}
+          className="inline-flex items-center gap-1 rounded-md border-[0.5px] border-emerald-600/10 bg-emerald-600/5 px-1.5 py-0.5 text-xs font-medium text-emerald-800"
+        >
+          {item.label}
+          <button
+            type="button"
+            onClick={() => onRemove(item.value)}
+            aria-label={`Remove ${item.label}`}
+            className="text-emerald-800/60 hover:text-emerald-800"
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      ))}
+    </div>
+  )
+}
 
 const statuses: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
 const stockStatuses: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
@@ -67,8 +99,9 @@ function MultiSelectField({
   onChange: (next: Set<string>) => void
   placeholder: string
   options: { value: string; label: string; dotClass?: string }[]
-  /** Shown in the confirmation toast when an option is checked, e.g. "Platform". */
-  fieldLabel: string
+  /** Shown in the confirmation toast when an option is checked, e.g. "Platform". Optional
+   *  so callers that don't care about the toast can skip it. */
+  fieldLabel?: string
 }) {
   const selectedLabel =
     value.size === 0
@@ -80,32 +113,38 @@ function MultiSelectField({
   const handleToggle = (option: { value: string; label: string }) => {
     const wasChecked = value.has(option.value)
     onChange(toggleInSet(value, option.value))
-    if (!wasChecked) toast(`Added "${option.label}" to ${fieldLabel} filter`)
+    if (!wasChecked && fieldLabel) toast(`Added "${option.label}" to ${fieldLabel} filter`)
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button type="button" className={selectTriggerClass}>
-            <span className={value.size ? "" : "text-muted-foreground"}>{selectedLabel}</span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-          </button>
-        }
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button type="button" className={selectTriggerClass}>
+              <span className={value.size ? "" : "text-muted-foreground"}>{selectedLabel}</span>
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          }
+        />
+        <DropdownMenuContent align="start" className="max-h-64">
+          {options.map((option) => (
+            <DropdownMenuCheckboxItem
+              key={option.value}
+              checked={value.has(option.value)}
+              onCheckedChange={() => handleToggle(option)}
+            >
+              {option.dotClass && <span className={`size-2 shrink-0 rounded-full ${option.dotClass}`} />}
+              {option.label}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <SelectedChips
+        items={options.filter((o) => value.has(o.value))}
+        onRemove={(v) => onChange(toggleInSet(value, v))}
       />
-      <DropdownMenuContent align="start" className="max-h-64">
-        {options.map((option) => (
-          <DropdownMenuCheckboxItem
-            key={option.value}
-            checked={value.has(option.value)}
-            onCheckedChange={() => handleToggle(option)}
-          >
-            {option.dotClass && <span className={`size-2 shrink-0 rounded-full ${option.dotClass}`} />}
-            {option.label}
-          </DropdownMenuCheckboxItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    </>
   )
 }
 
@@ -134,71 +173,73 @@ function DarkStoreMultiSelect({
   const selectedLabel = value.size === 0 ? "All Cities" : `${value.size} selected`
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next)
-        if (!next) setQuery("")
-      }}
-    >
-      <PopoverTrigger
-        render={
-          <button type="button" className={selectTriggerClass}>
-            <span className={value.size ? "" : "text-muted-foreground"}>{selectedLabel}</span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-          </button>
-        }
-      />
-      <PopoverContent align="start" className="w-(--anchor-width) max-w-[calc(100vw-3rem)] p-2">
-        <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5">
-          <Search className="size-3.5 shrink-0 text-muted-foreground" />
-          <input
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search city or store"
-            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-          />
-        </div>
+    <>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next)
+          if (!next) setQuery("")
+        }}
+      >
+        <PopoverTrigger
+          render={
+            <button type="button" className={selectTriggerClass}>
+              <span className={value.size ? "" : "text-muted-foreground"}>{selectedLabel}</span>
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          }
+        />
+        <PopoverContent align="start" className="w-(--anchor-width) max-w-[calc(100vw-3rem)] p-2">
+          <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5">
+            <Search className="size-3.5 shrink-0 text-muted-foreground" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search city or store"
+              className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
+          </div>
 
-        <div className="flex max-h-72 flex-col overflow-y-auto">
-          {citiesInOrder.length === 0 ? (
-            <p className="px-2 py-3 text-center text-xs text-muted-foreground">No stores match.</p>
-          ) : (
-            citiesInOrder.map((city) => (
-              <div key={city} className="flex flex-col">
-                <p className="px-2 pt-2 pb-1 text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
-                  {city}
-                </p>
-                {filtered
-                  .filter((store) => store.city === city)
-                  .map((store) => (
-                    <button
-                      key={store.id}
-                      type="button"
-                      onClick={() => {
-                        const wasChecked = value.has(store.id)
-                        onChange(toggleInSet(value, store.id))
-                        if (!wasChecked) toast(`Added "${store.name}" to Dark Store filter`)
-                      }}
-                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-                    >
-                      <span
-                        className={`flex size-4 shrink-0 items-center justify-center rounded border ${
-                          value.has(store.id) ? "border-primary bg-primary text-primary-foreground" : "border-input"
-                        }`}
+          <div className="flex max-h-72 flex-col overflow-y-auto">
+            {citiesInOrder.length === 0 ? (
+              <p className="px-2 py-3 text-center text-xs text-muted-foreground">No stores match.</p>
+            ) : (
+              citiesInOrder.map((city) => (
+                <div key={city} className="flex flex-col">
+                  <p className="px-2 pt-2 pb-1 text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+                    {city}
+                  </p>
+                  {filtered
+                    .filter((store) => store.city === city)
+                    .map((store) => (
+                      <button
+                        key={store.id}
+                        type="button"
+                        onClick={() => onChange(toggleInSet(value, store.id))}
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                       >
-                        {value.has(store.id) && <Check className="size-3" />}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-foreground">{store.name}</span>
-                    </button>
-                  ))}
-              </div>
-            ))
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+                        <span
+                          className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                            value.has(store.id) ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                          }`}
+                        >
+                          {value.has(store.id) && <Check className="size-3" />}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-foreground">{store.name}</span>
+                      </button>
+                    ))}
+                </div>
+              ))
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <SelectedChips
+        items={darkStoreLocations.filter((s) => value.has(s.id)).map((s) => ({ value: s.id, label: s.name }))}
+        onRemove={(id) => onChange(toggleInSet(value, id))}
+      />
+    </>
   )
 }
 
@@ -222,62 +263,64 @@ function ProductMultiSelect({
   const selectedLabel = value.size === 0 ? "All" : `${value.size} selected`
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next)
-        if (!next) setQuery("")
-      }}
-    >
-      <PopoverTrigger
-        render={
-          <button type="button" className={selectTriggerClass}>
-            <span className={value.size ? "" : "text-muted-foreground"}>{selectedLabel}</span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-          </button>
-        }
-      />
-      <PopoverContent align="start" className="w-(--anchor-width) max-w-[calc(100vw-3rem)] p-2">
-        <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5">
-          <Search className="size-3.5 shrink-0 text-muted-foreground" />
-          <input
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search products"
-            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-          />
-        </div>
+    <>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next)
+          if (!next) setQuery("")
+        }}
+      >
+        <PopoverTrigger
+          render={
+            <button type="button" className={selectTriggerClass}>
+              <span className={value.size ? "" : "text-muted-foreground"}>{selectedLabel}</span>
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          }
+        />
+        <PopoverContent align="start" className="w-(--anchor-width) max-w-[calc(100vw-3rem)] p-2">
+          <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5">
+            <Search className="size-3.5 shrink-0 text-muted-foreground" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search products"
+              className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
+          </div>
 
-        <div className="flex max-h-72 flex-col overflow-y-auto">
-          {filtered.length === 0 ? (
-            <p className="px-2 py-3 text-center text-xs text-muted-foreground">No products match.</p>
-          ) : (
-            filtered.map((name) => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => {
-                  const wasChecked = value.has(name)
-                  onChange(toggleInSet(value, name))
-                  if (!wasChecked) toast(`Added "${name}" to Products filter`)
-                }}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-              >
-                <span
-                  className={`flex size-4 shrink-0 items-center justify-center rounded border ${
-                    value.has(name) ? "border-primary bg-primary text-primary-foreground" : "border-input"
-                  }`}
+          <div className="flex max-h-72 flex-col overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="px-2 py-3 text-center text-xs text-muted-foreground">No products match.</p>
+            ) : (
+              filtered.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => onChange(toggleInSet(value, name))}
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                 >
-                  {value.has(name) && <Check className="size-3" />}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-foreground">{name}</span>
-              </button>
-            ))
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+                  <span
+                    className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                      value.has(name) ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                    }`}
+                  >
+                    {value.has(name) && <Check className="size-3" />}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-foreground">{name}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <SelectedChips
+        items={[...value].map((name) => ({ value: name, label: name }))}
+        onRemove={(name) => onChange(toggleInSet(value, name))}
+      />
+    </>
   )
 }
 
@@ -523,7 +566,6 @@ export function FiltersDrawer() {
                 onChange={setDraftCategoryIds}
                 placeholder="All Categories"
                 options={categoryOptions.map(([title, id]) => ({ value: id, label: title, dotClass: categoryDotClass(title) }))}
-                fieldLabel="Categories"
               />
             </label>
 
@@ -539,7 +581,6 @@ export function FiltersDrawer() {
                 onChange={setDraftPlatforms}
                 placeholder="All Platform"
                 options={platforms.map((platform) => ({ value: platform, label: platform }))}
-                fieldLabel="Platforms"
               />
             </label>
 
@@ -585,7 +626,6 @@ export function FiltersDrawer() {
                 onChange={setDraftGrammages}
                 placeholder="Select..."
                 options={grammages.map((grams) => ({ value: String(grams), label: `${grams}g` }))}
-                fieldLabel="Grammage"
               />
             </label>
 

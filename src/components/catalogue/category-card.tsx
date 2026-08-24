@@ -2,6 +2,7 @@ import { useRef, useState, type DragEvent } from "react"
 import { ChevronDown, Plus, GripVertical } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Category, CategorySku } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
@@ -93,7 +94,6 @@ export function CategoryCard({
   id,
   title,
   description,
-  itemCount,
   status,
   skus,
   anchorId,
@@ -149,48 +149,60 @@ export function CategoryCard({
               <p className="w-full text-sm leading-5 font-semibold text-foreground">{title}</p>
               <p className="w-full text-xs leading-4 text-muted-foreground">{description}</p>
             </div>
-            <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover/header:opacity-100">
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openAddProduct(id)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.stopPropagation()
-                    openAddProduct(id)
+            <div className="flex shrink-0 items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openAddProduct(id)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation()
+                          openAddProduct(id)
+                        }
+                      }}
+                      className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+                    >
+                      <Plus className="size-3.5" />
+                    </span>
                   }
-                }}
-                className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
-                title="Add SKU"
-              >
-                <Plus className="size-3.5" />
-              </span>
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggleCollapsed(id)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.stopPropagation()
-                    toggleCollapsed(id)
+                />
+                <TooltipContent side="top">Add SKU</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleCollapsed(id)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation()
+                          toggleCollapsed(id)
+                        }
+                      }}
+                      className="flex size-5 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100 hover:bg-background hover:text-foreground"
+                    >
+                      <ChevronDown className={`size-3.5 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+                    </span>
                   }
-                }}
-                className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
-                title={collapsed ? "Expand" : "Collapse"}
-              >
-                <ChevronDown className={`size-3.5 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
-              </span>
+                />
+                <TooltipContent side="top">{collapsed ? "Expand" : "Collapse"}</TooltipContent>
+              </Tooltip>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <span className="flex min-w-6 items-center justify-center rounded-md border-[0.5px] border-stone-500/10 bg-stone-500/5 px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap text-stone-800">
-              {itemCount} Items
+              {skus.length} Item{skus.length === 1 ? "" : "s"}
             </span>
             <span
               className={`flex min-w-6 items-center justify-center rounded-md border-[0.5px] px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap ${statusTagClasses[status]}`}
