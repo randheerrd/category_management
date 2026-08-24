@@ -3,9 +3,55 @@ import { CircleHelp, ChevronLeft, ChevronRight, ChevronDown, GripVertical } from
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Category, CategorySku, StockStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { channelLogos } from "@/lib/channel-logos"
+
+/** How many platform avatars show before the rest collapse into a "+N" chip. */
+const MAX_VISIBLE_PLATFORMS = 4
+
+/** One logo in the platform stack — overlapping circles with a background-colored ring
+ *  so they read as a group instead of a cluttered row of icon+label pairs. */
+function PlatformAvatar({ platform, overlap }: { platform: string; overlap: boolean }) {
+  const logo = channelLogos[platform]
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className={`flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-background bg-muted ${overlap ? "-ml-2" : ""}`}
+          >
+            {logo ? (
+              <img src={logo} alt="" className="size-full object-cover" />
+            ) : (
+              <CircleHelp className="size-3.5 text-muted-foreground" />
+            )}
+          </span>
+        }
+      />
+      <TooltipContent side="top">{platform}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+function PlatformStack({ platforms }: { platforms: string[] }) {
+  const visible = platforms.slice(0, MAX_VISIBLE_PLATFORMS)
+  const overflow = platforms.length - visible.length
+
+  return (
+    <div className="flex items-center">
+      {visible.map((platform, i) => (
+        <PlatformAvatar key={platform} platform={platform} overlap={i > 0} />
+      ))}
+      {overflow > 0 && (
+        <span className="-ml-2 flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-medium text-muted-foreground">
+          +{overflow}
+        </span>
+      )}
+    </div>
+  )
+}
 
 const stockDotClasses: Record<StockStatus, string> = {
   "In Stock": "text-emerald-700",
@@ -102,18 +148,7 @@ function ProductRow({ row, dragOver, onDragOverRow, onDragLeaveRow, onDropRow }:
       <TableCell className="font-normal">₹ {sku.price}</TableCell>
       <TableCell className="font-normal">{sku.weightGrams}g</TableCell>
       <TableCell className="overflow-hidden">
-        <div className="flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden font-normal text-foreground">
-          {platforms.map((platform) => (
-            <span key={platform} className="inline-flex items-center gap-1">
-              {channelLogos[platform] ? (
-                <img src={channelLogos[platform]} alt="" className="size-3.5 shrink-0 rounded-[2px] object-cover" />
-              ) : (
-                <CircleHelp className="size-3.5 shrink-0 text-muted-foreground" />
-              )}
-              {platform}
-            </span>
-          ))}
-        </div>
+        <PlatformStack platforms={platforms} />
       </TableCell>
       <TableCell className="font-normal">{sku.darkStores}</TableCell>
       <TableCell>

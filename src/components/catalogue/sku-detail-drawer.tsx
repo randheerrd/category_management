@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Check, ChevronDown, Plus, Search, Trash2, X } from "lucide-react"
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -40,11 +41,15 @@ export function SkuDetailDrawer() {
   const memberCategories = categories.filter((c) => c.skus.some((s) => s.id === selectedSkuId))
   const sku = memberCategories[0]?.skus.find((s) => s.id === selectedSkuId)
 
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [image, setImage] = useState<string | null>(null)
   const [mrp, setMrp] = useState("")
   const [price, setPrice] = useState("")
   const [weightGrams, setWeightGrams] = useState("")
   const [stock, setStock] = useState<StockStatus>("In Stock")
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false)
   const [categoryQuery, setCategoryQuery] = useState("")
   const [pendingPinTitle, setPendingPinTitle] = useState<string | null>(null)
@@ -54,11 +59,19 @@ export function SkuDetailDrawer() {
 
   useEffect(() => {
     if (!sku) return
+    setName(sku.name)
+    setDescription(sku.description)
+    setImage(sku.image)
     setMrp(String(sku.mrp))
     setPrice(String(sku.price))
     setWeightGrams(String(sku.weightGrams))
     setStock(sku.stock)
   }, [sku])
+
+  const handleFile = (file: File | undefined) => {
+    if (!file || !/^image\/(jpeg|png)$/.test(file.type)) return
+    setImage(URL.createObjectURL(file))
+  }
 
   // Once the just-created category shows up in context, pin the SKU into it —
   // createCategory doesn't hand back an id, so match on the title we just submitted.
@@ -123,6 +136,9 @@ export function SkuDetailDrawer() {
 
   const handleSave = () => {
     updateSku(sku.id, {
+      name: name.trim() || sku.name,
+      description: description.trim(),
+      image: image ?? sku.image,
       mrp: Number(mrp) || sku.mrp,
       price: Number(price) || sku.price,
       weightGrams: Number(weightGrams) || sku.weightGrams,
@@ -135,7 +151,7 @@ export function SkuDetailDrawer() {
     <Sheet open={Boolean(selectedSkuId)} onOpenChange={(open) => !open && closeSkuDetail()}>
       <SheetContent showCloseButton={false}>
         <SheetHeader className="justify-between">
-          <SheetTitle>{sku.name}</SheetTitle>
+          <SheetTitle>{name || sku.name}</SheetTitle>
           <button
             type="button"
             onClick={closeSkuDetail}
@@ -147,7 +163,38 @@ export function SkuDetailDrawer() {
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-          <img src={sku.image} alt={sku.name} className="aspect-[2.4] w-full rounded-lg object-cover" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png"
+            hidden
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="mx-auto flex size-24 cursor-pointer flex-col items-center justify-center gap-2 self-center"
+          >
+            <img src={image ?? sku.image} alt="" className="size-24 rounded-lg border border-border object-cover" />
+          </div>
+          <div className="-mt-3 flex flex-col items-center gap-0.5 text-center">
+            <p className="text-sm font-medium text-foreground">Upload Image</p>
+            <p className="text-xs text-muted-foreground">JPEG/PNG (Max size: 2mb)</p>
+          </div>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-muted-foreground">Name</span>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name" />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-muted-foreground">Description</span>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short description"
+              rows={3}
+            />
+          </label>
 
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">Pin to category</p>
