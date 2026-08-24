@@ -16,16 +16,16 @@ import layslogo from "@/assets/layslogo.png"
 import avatarFooter from "@/assets/avatar-footer.png"
 
 const primaryNav: { icon: LucideIcon; label: string }[] = [
-  { icon: SquareTerminal, label: "Overview" },
-  { icon: BriefcaseBusiness, label: "Brands" },
+  { icon: SquareTerminal, label: "Category RCA" },
+  { icon: BriefcaseBusiness, label: "Availability" },
   { icon: Package, label: "Catalogue" },
   { icon: Eye, label: "Visibility" },
 ]
 const secondaryNav: { icon: LucideIcon; label: string }[] = [
-  { icon: BadgePercent, label: "Promotions" },
-  { icon: Grid2x2, label: "Assortment" },
-  { icon: ChartColumnBig, label: "Analytics" },
-  { icon: NotebookText, label: "Reports" },
+  { icon: BadgePercent, label: "Discounting" },
+  { icon: Grid2x2, label: "Monitoring & Action" },
+  { icon: ChartColumnBig, label: "Performance Insights" },
+  { icon: NotebookText, label: "Rulesets" },
 ]
 
 /** Far-left collapsed icon rail. */
