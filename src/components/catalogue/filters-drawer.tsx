@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { ChevronDown, ListFilter } from "lucide-react"
+import { Check, ChevronDown, ListFilter, Search } from "lucide-react"
 
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -10,8 +10,10 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { CategoryStatus, CoverageLevel, StockStatus } from "@/lib/catalogue-data"
 import { channelNames } from "@/lib/catalogue-data"
+import { darkStoreCities, darkStoreLocations } from "@/lib/dark-store-locations"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { categoryDotClass } from "@/lib/category-colors"
 
@@ -104,6 +106,95 @@ function MultiSelectField({
 }
 
 /**
+ * Dark Store picker — every physical store across all channels, city-grouped and
+ * searchable, multi-select. Distinct from MultiSelectField (a flat checkbox dropdown)
+ * because a flat list of 40 stores across 5 channels is unbrowsable without search
+ * and city sections.
+ */
+function DarkStoreMultiSelect({
+  value,
+  onChange,
+}: {
+  value: Set<string>
+  onChange: (next: Set<string>) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+
+  const trimmed = query.trim().toLowerCase()
+  const filtered = darkStoreLocations.filter(
+    (store) => store.name.toLowerCase().includes(trimmed) || store.city.toLowerCase().includes(trimmed)
+  )
+  const citiesInOrder = darkStoreCities.filter((city) => filtered.some((store) => store.city === city))
+
+  const selectedLabel = value.size === 0 ? "All dark stores" : `${value.size} selected`
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setQuery("")
+      }}
+    >
+      <PopoverTrigger
+        render={
+          <button type="button" className={selectTriggerClass}>
+            <span className={value.size ? "" : "text-muted-foreground"}>{selectedLabel}</span>
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        }
+      />
+      <PopoverContent align="start" className="w-[352px] max-w-[calc(100vw-3rem)] p-2">
+        <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5">
+          <Search className="size-3.5 shrink-0 text-muted-foreground" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search city or store"
+            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+          />
+        </div>
+
+        <div className="flex max-h-72 flex-col overflow-y-auto">
+          {citiesInOrder.length === 0 ? (
+            <p className="px-2 py-3 text-center text-xs text-muted-foreground">No stores match.</p>
+          ) : (
+            citiesInOrder.map((city) => (
+              <div key={city} className="flex flex-col">
+                <p className="px-2 pt-2 pb-1 text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+                  {city}
+                </p>
+                {filtered
+                  .filter((store) => store.city === city)
+                  .map((store) => (
+                    <button
+                      key={store.id}
+                      type="button"
+                      onClick={() => onChange(toggleInSet(value, store.id))}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                    >
+                      <span
+                        className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                          value.has(store.id) ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                        }`}
+                      >
+                        {value.has(store.id) && <Check className="size-3" />}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-foreground">{store.name}</span>
+                    </button>
+                  ))}
+              </div>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/**
  * Right-side Filters sheet matching the Figma drawer. Field options come from the SKU table
  * (platform, dark store, category, stock, price, grammage) so every control actually filters
  * rows — every dropdown here is multi-select.
@@ -148,13 +239,6 @@ export function FiltersDrawer() {
     return [...new Set([...channelNames, ...fromTable])].filter(Boolean)
   }, [categories])
 
-  const darkStores = useMemo(() => {
-    const fromTable = categories.flatMap((category) =>
-      category.skus.flatMap((sku) => sku.darkStoreAvailability.map((store) => store.name))
-    )
-    return [...new Set([...channelNames, ...fromTable])]
-  }, [categories])
-
   const categoryOptions = useMemo(
     () => [...new Map(categories.map((category) => [category.title, category.id])).entries()],
     [categories]
@@ -172,7 +256,10 @@ export function FiltersDrawer() {
     setDraftStatus(new Set(statusFilter))
     setDraftStock(new Set(stockStatusFilter))
     setDraftPlatforms(new Set(platformFilter))
-    setDraftDarkStores(new Set(darkStoreFilter))
+    // darkStoreFilter is channel-level (that's the granularity the underlying coverage
+    // data has); the picker itself works in specific store ids, so re-opening the drawer
+    // pre-checks every store belonging to a previously-applied channel.
+    setDraftDarkStores(new Set(darkStoreLocations.filter((s) => darkStoreFilter.has(s.channel)).map((s) => s.id)))
     setDraftCoverage(coverageFilter)
     setDraftPriceMin(priceMin != null ? String(priceMin) : "")
     setDraftPriceMax(priceMax != null ? String(priceMax) : "")
@@ -223,7 +310,13 @@ export function FiltersDrawer() {
     setStatusFilterAll(draftStatus)
     setStockStatusFilterAll(draftStock)
     setPlatformFilterAll(draftPlatforms)
-    setDarkStoreFilterAll(draftDarkStores)
+    // Collapse the selected store ids back down to their parent channels — that's the
+    // granularity skuMatchesFilters actually checks against.
+    setDarkStoreFilterAll(
+      new Set(
+        darkStoreLocations.filter((s) => draftDarkStores.has(s.id)).map((s) => s.channel)
+      )
+    )
     setCoverageFilter(draftCoverage)
     setPriceMin(priceMinDraft)
     setPriceMax(priceMaxDraft)
@@ -256,12 +349,7 @@ export function FiltersDrawer() {
           <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
             <label className="flex flex-col gap-1.5">
               <SectionLabel>Dark Store</SectionLabel>
-              <MultiSelectField
-                value={draftDarkStores}
-                onChange={setDraftDarkStores}
-                placeholder="All dark stores"
-                options={darkStores.map((store) => ({ value: store, label: store }))}
-              />
+              <DarkStoreMultiSelect value={draftDarkStores} onChange={setDraftDarkStores} />
             </label>
 
             <label className="flex flex-col gap-1.5">
