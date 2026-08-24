@@ -16,7 +16,7 @@ import {
 
 import { ScoreRing } from "@/components/catalogue/score-ring"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   computeCatalogueIssues,
   computeChannelCoverage,
@@ -367,7 +367,6 @@ export function CatalogueHealthPanel() {
         <SheetContent showCloseButton className="sm:max-w-[400px]">
           <SheetHeader className="flex-col items-start gap-1 pr-10">
             <SheetTitle>Recent activity</SheetTitle>
-            <SheetDescription>The last {Math.min(activity.length, 20)} changes across this catalogue.</SheetDescription>
           </SheetHeader>
           <div className="flex min-h-0 flex-1 flex-col items-start overflow-y-auto p-4">
             {activity.slice(0, 20).map((entry, index, arr) => (
