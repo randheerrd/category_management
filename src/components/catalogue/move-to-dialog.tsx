@@ -157,7 +157,7 @@ export function MoveToDialog({ open, onOpenChange, skuIds }: MoveToDialogProps) 
                       <button
                         type="button"
                         onClick={startCreate}
-                        className="flex items-center gap-1.5 rounded-md border-t border-border px-2 pt-2 text-left text-sm font-medium text-primary hover:underline"
+                        className="-mx-2 -mb-2 flex items-center gap-1.5 border-t border-border px-3.5 pt-2 pb-2 text-left text-sm font-medium text-primary hover:underline"
                       >
                         <Plus className="size-3.5" />
                         Create "{trimmedQuery}"
@@ -243,9 +243,12 @@ export function MoveToDialog({ open, onOpenChange, skuIds }: MoveToDialogProps) 
               </label>
             </div>
 
-            <div className="mt-2 flex items-center justify-end">
+            <div className="mt-2 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setStep("pick")}>
+                Go back
+              </Button>
               <Button onClick={handleCreateAndGoBack} disabled={!newTitle.trim()}>
-                Create & Go back
+                Create
               </Button>
             </div>
           </>
