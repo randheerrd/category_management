@@ -1,5 +1,4 @@
 import { useEffect } from "react"
-import { Compass } from "lucide-react"
 
 import { TourGuide, type TourStep } from "@/lib/tour-guide"
 
@@ -8,11 +7,6 @@ const steps: TourStep[] = [
     target: null,
     title: "Welcome to Catalogue Health",
     body: "A quick look at where everything lives before you start pinning categories and SKUs.",
-  },
-  {
-    target: "#tour-sidebar",
-    title: "Switch modules here",
-    body: "Catalogue, Brands, Promotions, Analytics — every module in the workspace lives in this rail.",
   },
   {
     target: "#tour-health-panel",
@@ -42,14 +36,14 @@ const steps: TourStep[] = [
   {
     target: null,
     title: "You're all set",
-    body: "Replay this tour any time from the Tour button in the top bar.",
+    body: "That's the whole board — start pinning categories and SKUs whenever you're ready.",
   },
 ]
 
 /**
  * Spotlight walkthrough for the catalogue board. Always auto-starts as a first-time
- * interaction on landing — no "seen it before" memory — and is always replayable via
- * the Tour button.
+ * interaction on landing — no "seen it before" memory. No replay button — the tour
+ * only ever runs on that initial landing.
  */
 export function ProductTour() {
   useEffect(() => {
@@ -60,13 +54,5 @@ export function ProductTour() {
     return () => clearTimeout(timer)
   }, [])
 
-  return (
-    <>
-      <button id="tgReplayTour" type="button" className="tg-replay-btn">
-        <Compass className="size-3.5" />
-        Tour
-      </button>
-      <div id="tgOverlay" />
-    </>
-  )
+  return <div id="tgOverlay" />
 }

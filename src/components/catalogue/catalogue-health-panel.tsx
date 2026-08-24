@@ -202,6 +202,15 @@ export function CatalogueHealthPanel() {
                   </div>
                 ))}
               </div>
+
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="flex items-center gap-1 rounded-lg py-1 text-sm leading-6 font-medium text-foreground hover:underline"
+              >
+                Full Report
+                <ArrowRight className="size-4" />
+              </button>
             </div>
           </div>
 
