@@ -445,8 +445,6 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
 
   const setView = (next: BoardView) => {
     setViewState(next)
-    // The analytics rail is hidden by default on the table screen to give the grid room to breathe.
-    setShowAnalyticsPanel(next === "grid")
     clearSelection()
   }
 
