@@ -159,6 +159,23 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       { id: "activity-demo-1", type: "move", message: "Move Chile Limon 52g to Spicy", timestamp: Date.now() - 1 * dayMs },
       { id: "activity-demo-2", type: "add", message: "SKU added Protein Chips", timestamp: Date.now() - 2 * dayMs },
       { id: "activity-demo-3", type: "category-create", message: "Category created Beverages", timestamp: Date.now() - 5 * dayMs },
+      { id: "activity-demo-4", type: "import", message: "Imported 24 SKUs from CSV", timestamp: Date.now() - 6 * dayMs },
+      { id: "activity-demo-5", type: "move", message: "Move Magic Masala 90g to Bestsellers", timestamp: Date.now() - 7 * dayMs },
+      { id: "activity-demo-6", type: "delete", message: "SKU deleted India's Magic Masala 28g", timestamp: Date.now() - 8 * dayMs },
+      { id: "activity-demo-7", type: "add", message: "SKU added Sour Cream & Onion 52g", timestamp: Date.now() - 9 * dayMs },
+      { id: "activity-demo-8", type: "category-create", message: "Category created Party Packs", timestamp: Date.now() - 10 * dayMs },
+      { id: "activity-demo-9", type: "remove", message: "Removed 3 SKUs from category", timestamp: Date.now() - 11 * dayMs },
+      { id: "activity-demo-10", type: "move", message: "Move Classic Salted 90g to Bestsellers", timestamp: Date.now() - 12 * dayMs },
+      { id: "activity-demo-11", type: "add", message: "SKU added Tangy Tomato 28g", timestamp: Date.now() - 13 * dayMs },
+      { id: "activity-demo-12", type: "category-delete", message: "Category deleted Seasonal", timestamp: Date.now() - 14 * dayMs },
+      { id: "activity-demo-13", type: "import", message: "Imported 12 SKUs from CSV", timestamp: Date.now() - 15 * dayMs },
+      { id: "activity-demo-14", type: "move", message: "Move American Style Cream & Onion 52g to Spicy", timestamp: Date.now() - 16 * dayMs },
+      { id: "activity-demo-15", type: "add", message: "SKU added Chile Limon 28g", timestamp: Date.now() - 17 * dayMs },
+      { id: "activity-demo-16", type: "delete", message: "SKU deleted Magic Masala 14g", timestamp: Date.now() - 18 * dayMs },
+      { id: "activity-demo-17", type: "category-create", message: "Category created Health Snacks", timestamp: Date.now() - 19 * dayMs },
+      { id: "activity-demo-18", type: "move", message: "Move Protein Chips to Health Snacks", timestamp: Date.now() - 20 * dayMs },
+      { id: "activity-demo-19", type: "remove", message: "Removed 2 SKUs from category", timestamp: Date.now() - 21 * dayMs },
+      { id: "activity-demo-20", type: "add", message: "SKU added Spanish Tomato Tango 52g", timestamp: Date.now() - 22 * dayMs },
     ])
   }
 
