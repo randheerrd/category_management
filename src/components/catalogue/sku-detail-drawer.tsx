@@ -464,14 +464,14 @@ export function SkuDetailDrawer() {
                     </button>
                   </span>
                 ))}
-                {!showAllStoreChips && stockedLocations.length > 3 && (
+                {stockedLocations.length > 3 && (
                   <button
                     type="button"
-                    onClick={() => setShowAllStoreChips(true)}
+                    onClick={() => setShowAllStoreChips((prev) => !prev)}
                     className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-muted"
                   >
-                    {stockedLocations.length - 3} More
-                    <ChevronDown className="size-3" />
+                    {showAllStoreChips ? "Less" : `${stockedLocations.length - 3} More`}
+                    <ChevronDown className={`size-3 transition-transform ${showAllStoreChips ? "rotate-180" : ""}`} />
                   </button>
                 )}
               </div>
