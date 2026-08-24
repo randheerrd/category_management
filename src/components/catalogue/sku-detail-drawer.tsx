@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react"
-import { ChevronDown, Trash2, X } from "lucide-react"
+import { Check, ChevronDown, Plus, Search, Trash2, X } from "lucide-react"
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { UNLISTED_CATEGORY_ID, type StockStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { channelLogos } from "@/lib/channel-logos"
@@ -33,6 +33,7 @@ export function SkuDetailDrawer() {
     deleteSku,
     pinSkuToCategory,
     unpinSkuFromCategory,
+    createCategory,
   } = useCatalogue()
 
   const memberCategories = categories.filter((c) => c.skus.some((s) => s.id === selectedSkuId))
@@ -43,6 +44,9 @@ export function SkuDetailDrawer() {
   const [weightGrams, setWeightGrams] = useState("")
   const [stock, setStock] = useState<StockStatus>("In Stock")
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false)
+  const [categoryQuery, setCategoryQuery] = useState("")
+  const [pendingPinTitle, setPendingPinTitle] = useState<string | null>(null)
 
   useEffect(() => {
     if (!sku) return
@@ -51,6 +55,16 @@ export function SkuDetailDrawer() {
     setWeightGrams(String(sku.weightGrams))
     setStock(sku.stock)
   }, [sku])
+
+  // Once the just-created category shows up in context, pin the SKU into it —
+  // createCategory doesn't hand back an id, so match on the title we just submitted.
+  useEffect(() => {
+    if (!pendingPinTitle || !sku) return
+    const created = categories.find((c) => c.title === pendingPinTitle)
+    if (!created) return
+    pinSkuToCategory(sku.id, created.id)
+    setPendingPinTitle(null)
+  }, [categories, pendingPinTitle, sku, pinSkuToCategory])
 
   if (memberCategories.length === 0 || !sku) return null
 
@@ -61,6 +75,20 @@ export function SkuDetailDrawer() {
   const togglePin = (categoryId: string, pinned: boolean) => {
     if (pinned) unpinSkuFromCategory(sku.id, categoryId)
     else pinSkuToCategory(sku.id, categoryId)
+  }
+
+  const trimmedCategoryQuery = categoryQuery.trim()
+  const filteredCategories = categories.filter((c) =>
+    c.title.toLowerCase().includes(trimmedCategoryQuery.toLowerCase())
+  )
+  const exactCategoryMatch = categories.some((c) => c.title.toLowerCase() === trimmedCategoryQuery.toLowerCase())
+
+  const createAndPin = () => {
+    if (!trimmedCategoryQuery) return
+    setPendingPinTitle(trimmedCategoryQuery)
+    createCategory({ title: trimmedCategoryQuery, description: "", status: "Active" })
+    setCategoryQuery("")
+    setCategoryPopoverOpen(false)
   }
 
   const handleSave = () => {
@@ -130,8 +158,14 @@ export function SkuDetailDrawer() {
 
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">Pinned in</p>
-            <DropdownMenu>
-              <DropdownMenuTrigger
+            <Popover
+              open={categoryPopoverOpen}
+              onOpenChange={(next) => {
+                setCategoryPopoverOpen(next)
+                if (!next) setCategoryQuery("")
+              }}
+            >
+              <PopoverTrigger
                 render={
                   <button type="button" className={selectTriggerClasses}>
                     <span className={memberCategories.length ? "" : "text-muted-foreground"}>
@@ -143,21 +177,58 @@ export function SkuDetailDrawer() {
                   </button>
                 }
               />
-              <DropdownMenuContent align="start">
-                {categories.map((c) => (
-                  <DropdownMenuCheckboxItem
-                    key={c.id}
-                    checked={memberCategoryIds.has(c.id)}
-                    onCheckedChange={() => togglePin(c.id, memberCategoryIds.has(c.id))}
-                    // Unchecking a SKU's only remaining category isn't a delete — it falls
-                    // back to Unlisted — so nothing here needs to be un-selectable.
-                    onSelect={(e) => e.preventDefault()}
+              <PopoverContent align="start" className="w-[352px] max-w-[calc(100vw-3rem)] p-2">
+                <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5">
+                  <Search className="size-3.5 shrink-0 text-muted-foreground" />
+                  <input
+                    autoFocus
+                    value={categoryQuery}
+                    onChange={(e) => setCategoryQuery(e.target.value)}
+                    placeholder="Search category"
+                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex max-h-52 flex-col overflow-y-auto">
+                  {filteredCategories.length === 0 ? (
+                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">No categories match.</p>
+                  ) : (
+                    filteredCategories.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        // Unchecking a SKU's only remaining category isn't a delete — it falls
+                        // back to Unlisted — so nothing here needs to be un-selectable.
+                        onClick={() => togglePin(c.id, memberCategoryIds.has(c.id))}
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                      >
+                        <span
+                          className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                            memberCategoryIds.has(c.id)
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-input"
+                          }`}
+                        >
+                          {memberCategoryIds.has(c.id) && <Check className="size-3" />}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-foreground">{c.title}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                {trimmedCategoryQuery && !exactCategoryMatch && (
+                  <button
+                    type="button"
+                    onClick={createAndPin}
+                    className="-mx-2 -mb-2 flex items-center gap-1.5 border-t border-border px-3.5 pt-2 pb-2 text-left text-sm font-medium text-primary hover:underline"
                   >
-                    {c.title}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <Plus className="size-3.5" />
+                    Create "{trimmedCategoryQuery}"
+                  </button>
+                )}
+              </PopoverContent>
+            </Popover>
             <div className="flex flex-wrap items-center gap-2">
               {memberCategories.map((c) => (
                 <span
