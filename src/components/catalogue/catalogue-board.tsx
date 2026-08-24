@@ -7,12 +7,8 @@ export function CatalogueBoard() {
   const { visibleCategories, view } = useCatalogue()
 
   if (view === "table") {
-    // The table itself runs edge-to-edge (no side padding/card wrapper).
-    return (
-      <div className="flex w-full flex-col items-start pt-[26px] pb-[26px]">
-        <SkuTable />
-      </div>
-    )
+    // The table itself runs edge-to-edge — no side/top padding or card wrapper.
+    return <SkuTable />
   }
 
   return (

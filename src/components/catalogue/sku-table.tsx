@@ -235,7 +235,7 @@ export function SkuTable() {
           <col className="w-[15%]" />
         </colgroup>
         <TableHeader>
-          <TableRow className="h-9 bg-[rgba(241,245,249,0.4)] font-normal hover:bg-[rgba(241,245,249,0.4)] [&>th]:h-9 [&>th]:py-0">
+          <TableRow className="h-9 bg-background font-normal text-muted-foreground hover:bg-background [&>th]:h-9 [&>th]:py-0">
             <TableHead className="w-6 p-0" />
             <TableHead className="w-9 p-0 font-normal">
               <div className="flex size-9 items-center justify-center">
@@ -246,13 +246,13 @@ export function SkuTable() {
                 />
               </div>
             </TableHead>
-            <TableHead className="font-normal">Name</TableHead>
-            <TableHead className="font-normal">MRP</TableHead>
-            <TableHead className="font-normal">Price</TableHead>
-            <TableHead className="font-normal">Grammage</TableHead>
-            <TableHead className="font-normal">Platform</TableHead>
-            <TableHead className="font-normal">Dark Stores</TableHead>
-            <TableHead className="font-normal">Stock</TableHead>
+            <TableHead className="font-normal text-muted-foreground">Name</TableHead>
+            <TableHead className="font-normal text-muted-foreground">MRP</TableHead>
+            <TableHead className="font-normal text-muted-foreground">Price</TableHead>
+            <TableHead className="font-normal text-muted-foreground">Grammage</TableHead>
+            <TableHead className="font-normal text-muted-foreground">Platform</TableHead>
+            <TableHead className="font-normal text-muted-foreground">Dark Stores</TableHead>
+            <TableHead className="font-normal text-muted-foreground">Stock</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
