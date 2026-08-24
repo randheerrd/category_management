@@ -179,12 +179,12 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
           </button>
         </SheetHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-          <p className="text-sm text-muted-foreground">
-            Editing {skuIds.length} SKU{skuIds.length === 1 ? "" : "s"}. Blank fields stay as-is; categories,
-            platforms, and dark stores you pick are added on top of what each SKU already has.
-          </p>
+        <div className="shrink-0 border-b border-destructive/20 bg-destructive/5 px-4 py-3 text-sm leading-5 text-destructive">
+          Editing will replace the existing data with the new details from Scratch. Please review the changes
+          carefully before proceeding.
+        </div>
 
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
           <input
             ref={fileInputRef}
             type="file"
