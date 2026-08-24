@@ -11,20 +11,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import type { CategoryStatus, CoverageLevel, StockStatus } from "@/lib/catalogue-data"
+import type { CategoryStatus, StockStatus } from "@/lib/catalogue-data"
 import { channelNames } from "@/lib/catalogue-data"
 import { darkStoreCities, darkStoreLocations } from "@/lib/dark-store-locations"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { categoryDotClass } from "@/lib/category-colors"
+import { toast } from "@/lib/toast"
 
 const statuses: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
 const stockStatuses: StockStatus[] = ["In Stock", "Low Stock", "Out of Stock"]
-const coverageLevels: { value: CoverageLevel; label: string }[] = [
-  { value: "any", label: "Any" },
-  { value: "none", label: "No Coverage" },
-  { value: "full", label: "Full Coverage" },
-  { value: "partial", label: "Partial" },
-]
 
 const selectTriggerClass =
   "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -66,11 +61,14 @@ function MultiSelectField({
   onChange,
   placeholder,
   options,
+  fieldLabel,
 }: {
   value: Set<string>
   onChange: (next: Set<string>) => void
   placeholder: string
   options: { value: string; label: string; dotClass?: string }[]
+  /** Shown in the confirmation toast when an option is checked, e.g. "Platform". */
+  fieldLabel: string
 }) {
   const selectedLabel =
     value.size === 0
@@ -78,6 +76,12 @@ function MultiSelectField({
       : value.size === 1
         ? (options.find((option) => value.has(option.value))?.label ?? placeholder)
         : `${value.size} selected`
+
+  const handleToggle = (option: { value: string; label: string }) => {
+    const wasChecked = value.has(option.value)
+    onChange(toggleInSet(value, option.value))
+    if (!wasChecked) toast(`Added "${option.label}" to ${fieldLabel} filter`)
+  }
 
   return (
     <DropdownMenu>
@@ -94,7 +98,7 @@ function MultiSelectField({
           <DropdownMenuCheckboxItem
             key={option.value}
             checked={value.has(option.value)}
-            onCheckedChange={() => onChange(toggleInSet(value, option.value))}
+            onCheckedChange={() => handleToggle(option)}
           >
             {option.dotClass && <span className={`size-2 shrink-0 rounded-full ${option.dotClass}`} />}
             {option.label}
@@ -127,7 +131,7 @@ function DarkStoreMultiSelect({
   )
   const citiesInOrder = darkStoreCities.filter((city) => filtered.some((store) => store.city === city))
 
-  const selectedLabel = value.size === 0 ? "All dark stores" : `${value.size} selected`
+  const selectedLabel = value.size === 0 ? "All Cities" : `${value.size} selected`
 
   return (
     <Popover
@@ -172,7 +176,11 @@ function DarkStoreMultiSelect({
                     <button
                       key={store.id}
                       type="button"
-                      onClick={() => onChange(toggleInSet(value, store.id))}
+                      onClick={() => {
+                        const wasChecked = value.has(store.id)
+                        onChange(toggleInSet(value, store.id))
+                        if (!wasChecked) toast(`Added "${store.name}" to Dark Store filter`)
+                      }}
                       className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                     >
                       <span
@@ -211,7 +219,7 @@ function ProductMultiSelect({
   const trimmed = query.trim().toLowerCase()
   const filtered = options.filter((name) => name.toLowerCase().includes(trimmed))
 
-  const selectedLabel = value.size === 0 ? "All products" : `${value.size} selected`
+  const selectedLabel = value.size === 0 ? "All" : `${value.size} selected`
 
   return (
     <Popover
@@ -249,7 +257,11 @@ function ProductMultiSelect({
               <button
                 key={name}
                 type="button"
-                onClick={() => onChange(toggleInSet(value, name))}
+                onClick={() => {
+                  const wasChecked = value.has(name)
+                  onChange(toggleInSet(value, name))
+                  if (!wasChecked) toast(`Added "${name}" to Products filter`)
+                }}
                 className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
               >
                 <span
@@ -263,6 +275,67 @@ function ProductMultiSelect({
               </button>
             ))
           )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/** Price range picker — a popover holding Min/Max inputs instead of a two-column pair
+ *  sitting directly in the drawer, so it reads as one field like every other filter here. */
+function PriceRangeSelect({
+  min,
+  max,
+  onMinChange,
+  onMaxChange,
+}: {
+  min: string
+  max: string
+  onMinChange: (value: string) => void
+  onMaxChange: (value: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const hasValue = min !== "" || max !== ""
+  const label = hasValue
+    ? `₹${min || "0"} – ₹${max || "Any"}`
+    : "Select..."
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button type="button" className={selectTriggerClass}>
+            <span className={hasValue ? "" : "text-muted-foreground"}>{label}</span>
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        }
+      />
+      <PopoverContent align="start" className="w-(--anchor-width) max-w-[calc(100vw-3rem)] p-3">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Min Price (₹)</span>
+            <Input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              placeholder="Min"
+              value={min}
+              onChange={(e) => onMinChange(e.target.value)}
+              className="h-8"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Max Price (₹)</span>
+            <Input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              placeholder="Max"
+              value={max}
+              onChange={(e) => onMaxChange(e.target.value)}
+              className="h-8"
+            />
+          </label>
         </div>
       </PopoverContent>
     </Popover>
@@ -290,14 +363,13 @@ export function FiltersDrawer() {
     setPlatformFilterAll,
     darkStoreFilter,
     setDarkStoreFilterAll,
-    coverageFilter,
-    setCoverageFilter,
     priceMin,
     setPriceMin,
     priceMax,
     setPriceMax,
     grammageFilter,
     setGrammageFilterAll,
+    countMatchingSkus,
   } = useCatalogue()
 
   const [open, setOpen] = useState(false)
@@ -307,7 +379,6 @@ export function FiltersDrawer() {
   const [draftStock, setDraftStock] = useState<Set<StockStatus>>(new Set())
   const [draftPlatforms, setDraftPlatforms] = useState<Set<string>>(new Set())
   const [draftDarkStores, setDraftDarkStores] = useState<Set<string>>(new Set())
-  const [draftCoverage, setDraftCoverage] = useState<CoverageLevel>("any")
   const [draftPriceMin, setDraftPriceMin] = useState("")
   const [draftPriceMax, setDraftPriceMax] = useState("")
   const [draftGrammages, setDraftGrammages] = useState<Set<string>>(new Set())
@@ -344,7 +415,6 @@ export function FiltersDrawer() {
     // data has); the picker itself works in specific store ids, so re-opening the drawer
     // pre-checks every store belonging to a previously-applied channel.
     setDraftDarkStores(new Set(darkStoreLocations.filter((s) => darkStoreFilter.has(s.channel)).map((s) => s.id)))
-    setDraftCoverage(coverageFilter)
     setDraftPriceMin(priceMin != null ? String(priceMin) : "")
     setDraftPriceMax(priceMax != null ? String(priceMax) : "")
     setDraftGrammages(new Set([...grammageFilter].map(String)))
@@ -356,7 +426,6 @@ export function FiltersDrawer() {
     stockStatusFilter,
     platformFilter,
     darkStoreFilter,
-    coverageFilter,
     priceMin,
     priceMax,
     grammageFilter,
@@ -374,7 +443,6 @@ export function FiltersDrawer() {
     setDraftStock(new Set())
     setDraftPlatforms(new Set())
     setDraftDarkStores(new Set())
-    setDraftCoverage("any")
     setDraftPriceMin("")
     setDraftPriceMax("")
     setDraftGrammages(new Set())
@@ -387,10 +455,28 @@ export function FiltersDrawer() {
     draftStock.size > 0 ||
     draftPlatforms.size > 0 ||
     draftDarkStores.size > 0 ||
-    draftCoverage !== "any" ||
     draftPriceMin !== "" ||
     draftPriceMax !== "" ||
     draftGrammages.size > 0
+
+  // Channel-level view of the draft store picks — skuMatchesFilters only checks at that
+  // granularity, so both the live count below and the actual Apply use this same set.
+  const draftDarkStoreChannels = new Set(
+    darkStoreLocations.filter((s) => draftDarkStores.has(s.id)).map((s) => s.channel)
+  )
+
+  const draftResultCount = countMatchingSkus({
+    categoryFilterIds: draftCategoryIds,
+    statusFilter: draftStatus,
+    productNameFilter: draftProductNames,
+    stockStatusFilter: draftStock,
+    platformFilter: draftPlatforms,
+    darkStoreFilter: draftDarkStoreChannels,
+    coverageFilter: "any",
+    priceMin: priceMinDraft,
+    priceMax: priceMaxDraft,
+    grammageFilter: new Set([...draftGrammages].map(Number)),
+  })
 
   const handleApply = () => {
     setCategoryFilterIds(draftCategoryIds)
@@ -400,12 +486,7 @@ export function FiltersDrawer() {
     setPlatformFilterAll(draftPlatforms)
     // Collapse the selected store ids back down to their parent channels — that's the
     // granularity skuMatchesFilters actually checks against.
-    setDarkStoreFilterAll(
-      new Set(
-        darkStoreLocations.filter((s) => draftDarkStores.has(s.id)).map((s) => s.channel)
-      )
-    )
-    setCoverageFilter(draftCoverage)
+    setDarkStoreFilterAll(draftDarkStoreChannels)
     setPriceMin(priceMinDraft)
     setPriceMax(priceMaxDraft)
     setGrammageFilterAll(new Set([...draftGrammages].map(Number)))
@@ -436,8 +517,30 @@ export function FiltersDrawer() {
 
           <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
             <label className="flex flex-col gap-1.5">
-              <SectionLabel>Products</SectionLabel>
+              <SectionLabel>Categories</SectionLabel>
+              <MultiSelectField
+                value={draftCategoryIds}
+                onChange={setDraftCategoryIds}
+                placeholder="All Categories"
+                options={categoryOptions.map(([title, id]) => ({ value: id, label: title, dotClass: categoryDotClass(title) }))}
+                fieldLabel="Categories"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <SectionLabel>Product</SectionLabel>
               <ProductMultiSelect value={draftProductNames} onChange={setDraftProductNames} options={productNames} />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <SectionLabel>Platforms</SectionLabel>
+              <MultiSelectField
+                value={draftPlatforms}
+                onChange={setDraftPlatforms}
+                placeholder="All Platform"
+                options={platforms.map((platform) => ({ value: platform, label: platform }))}
+                fieldLabel="Platforms"
+              />
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -445,28 +548,8 @@ export function FiltersDrawer() {
               <DarkStoreMultiSelect value={draftDarkStores} onChange={setDraftDarkStores} />
             </label>
 
-            <label className="flex flex-col gap-1.5">
-              <SectionLabel>Platform</SectionLabel>
-              <MultiSelectField
-                value={draftPlatforms}
-                onChange={setDraftPlatforms}
-                placeholder="All platforms"
-                options={platforms.map((platform) => ({ value: platform, label: platform }))}
-              />
-            </label>
-
-            <label className="flex flex-col gap-1.5">
-              <SectionLabel>Categories</SectionLabel>
-              <MultiSelectField
-                value={draftCategoryIds}
-                onChange={setDraftCategoryIds}
-                placeholder="All categories"
-                options={categoryOptions.map(([title, id]) => ({ value: id, label: title, dotClass: categoryDotClass(title) }))}
-              />
-            </label>
-
             <div className="flex flex-col gap-1.5">
-              <SectionLabel>Category Status</SectionLabel>
+              <SectionLabel>Status</SectionLabel>
               <div className="flex flex-wrap gap-2">
                 {statuses.map((status) => (
                   <Chip
@@ -495,65 +578,32 @@ export function FiltersDrawer() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <SectionLabel>Dark Store Coverage</SectionLabel>
-              <div className="flex flex-wrap gap-2">
-                {coverageLevels.map((level) => (
-                  <Chip
-                    key={level.value}
-                    active={draftCoverage === level.value}
-                    onClick={() => setDraftCoverage(level.value)}
-                  >
-                    {level.label}
-                  </Chip>
-                ))}
-              </div>
-            </div>
+            <label className="flex flex-col gap-1.5">
+              <SectionLabel>Grammage</SectionLabel>
+              <MultiSelectField
+                value={draftGrammages}
+                onChange={setDraftGrammages}
+                placeholder="Select..."
+                options={grammages.map((grams) => ({ value: String(grams), label: `${grams}g` }))}
+                fieldLabel="Grammage"
+              />
+            </label>
 
-            <div className="flex flex-col gap-2">
-              <SectionLabel>Price &amp; Size</SectionLabel>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Min Price (₹)</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    placeholder="Min"
-                    value={draftPriceMin}
-                    onChange={(e) => setDraftPriceMin(e.target.value)}
-                    className="h-8"
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Max Price (₹)</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    placeholder="Max"
-                    value={draftPriceMax}
-                    onChange={(e) => setDraftPriceMax(e.target.value)}
-                    className="h-8"
-                  />
-                </label>
-              </div>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-muted-foreground">Grammage</span>
-                <MultiSelectField
-                  value={draftGrammages}
-                  onChange={setDraftGrammages}
-                  placeholder="All"
-                  options={grammages.map((grams) => ({ value: String(grams), label: `${grams}g` }))}
-                />
-              </label>
-            </div>
+            <label className="flex flex-col gap-1.5">
+              <SectionLabel>Price</SectionLabel>
+              <PriceRangeSelect
+                min={draftPriceMin}
+                max={draftPriceMax}
+                onMinChange={setDraftPriceMin}
+                onMaxChange={setDraftPriceMax}
+              />
+            </label>
           </div>
 
           <SheetFooter>
             {hasDraftFilters ? (
               <Button type="button" variant="ghost" onClick={handleClearAll}>
-                Clear all
+                Clear All
               </Button>
             ) : (
               <span />
@@ -562,7 +612,7 @@ export function FiltersDrawer() {
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleApply}>Apply</Button>
+              <Button onClick={handleApply}>Show {draftResultCount} results</Button>
             </div>
           </SheetFooter>
         </SheetContent>
