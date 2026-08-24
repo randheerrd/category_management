@@ -170,18 +170,9 @@ function CategoryGroupHeader({
 /** Flat, edge-to-edge table of every visible product — unique by product name, each row rolling
  *  up every category it's pinned in and every platform it's listed on. Optionally grouped by category. */
 export function SkuTable() {
-  const { visibleCategories, groupByCategory, selectedSkuIds, setSelectedSkuIds, moveSku } = useCatalogue()
-  const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<string>>(new Set())
+  const { visibleCategories, groupByCategory, selectedSkuIds, setSelectedSkuIds, moveSku, collapsedIds, toggleCollapsed } =
+    useCatalogue()
   const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(null)
-
-  const toggleCategoryCollapsed = (categoryId: string) => {
-    setCollapsedCategoryIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(categoryId)) next.delete(categoryId)
-      else next.add(categoryId)
-      return next
-    })
-  }
 
   const dragHandlersFor = (toCategoryId: string) => ({
     dragOver: dragOverCategoryId === toCategoryId,
@@ -275,14 +266,14 @@ export function SkuTable() {
           {groupByCategory
             ? visibleCategories.map((category) => {
                 if (category.skus.length === 0) return null
-                const collapsed = collapsedCategoryIds.has(category.id)
+                const collapsed = collapsedIds.has(category.id)
                 const dragHandlers = dragHandlersFor(category.id)
                 return (
                   <Fragment key={category.id}>
                     <CategoryGroupHeader
                       category={category}
                       collapsed={collapsed}
-                      onToggle={() => toggleCategoryCollapsed(category.id)}
+                      onToggle={() => toggleCollapsed(category.id)}
                       {...dragHandlers}
                     />
                     {!collapsed &&

@@ -1,11 +1,11 @@
-import { Search, LayoutGrid, Table as TableIcon, X } from "lucide-react"
+import { Search, LayoutGrid, Table as TableIcon, X, ChevronsDownUp, ChevronsUpDown } from "lucide-react"
 
 import { FiltersDrawer } from "@/components/catalogue/filters-drawer"
 import { useCatalogue } from "@/lib/catalogue-context"
 
-/** Search input, filters button, and grid/table view switch above the board. */
+/** Search input, collapse-all, filters button, and grid/table view switch above the board. */
 export function BoardToolbar() {
-  const { search, setSearch, view, setView } = useCatalogue()
+  const { search, setSearch, view, setView, allCollapsed, collapseAll, expandAll } = useCatalogue()
 
   return (
     <div className="sticky top-0 z-20 flex h-12 w-full shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
@@ -28,6 +28,16 @@ export function BoardToolbar() {
       </div>
 
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={allCollapsed ? expandAll : collapseAll}
+          title={allCollapsed ? "Expand all" : "Collapse all"}
+          aria-label={allCollapsed ? "Expand all categories" : "Collapse all categories"}
+          className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-background text-foreground hover:bg-muted"
+        >
+          {allCollapsed ? <ChevronsUpDown className="size-4" /> : <ChevronsDownUp className="size-4" />}
+        </button>
+
         <div id="tour-filters">
           <FiltersDrawer />
         </div>
