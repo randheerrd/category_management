@@ -12,29 +12,26 @@ export interface DarkStoreLocation {
   channel: string
 }
 
+// Limited to Delhi NCR only, per request — every channel runs stores here.
 const citiesByChannel: Record<string, string[]> = {
-  "Amazon Now": ["Mumbai", "Bengaluru", "Delhi NCR", "Hyderabad"],
-  Blinkit: ["Mumbai", "Delhi NCR", "Bengaluru", "Pune", "Chennai"],
-  BigBasket: ["Bengaluru", "Hyderabad", "Chennai", "Mumbai"],
-  Instamart: ["Hyderabad", "Bengaluru", "Delhi NCR", "Pune"],
-  Zepto: ["Mumbai", "Delhi NCR", "Bengaluru"],
+  "Amazon Now": ["Delhi NCR"],
+  Blinkit: ["Delhi NCR"],
+  BigBasket: ["Delhi NCR"],
+  Instamart: ["Delhi NCR"],
+  Zepto: ["Delhi NCR"],
 }
 
 const areasByCity: Record<string, string[]> = {
-  Mumbai: ["Andheri", "Bandra", "Powai", "Malad"],
-  Bengaluru: ["Koramangala", "Indiranagar", "Whitefield", "HSR Layout"],
-  "Delhi NCR": ["Connaught Place", "Gurugram", "Noida", "Dwarka"],
-  Hyderabad: ["Gachibowli", "Banjara Hills", "Kondapur"],
-  Pune: ["Kothrud", "Viman Nagar", "Hinjewadi"],
-  Chennai: ["Anna Nagar", "T Nagar", "Velachery"],
+  "Delhi NCR": ["Connaught Place", "Gurugram", "Noida", "Dwarka", "Rohini", "Saket"],
 }
 
-/** Two stores per city per channel, cycling through that city's named areas. */
-export const darkStoreLocations: DarkStoreLocation[] = channelNames.flatMap((channel) =>
-  (citiesByChannel[channel] ?? []).flatMap((city, cityIndex) => {
+/** Two stores per city per channel, cycling through that city's named areas — offset by
+ *  the channel's own index so different channels land on different areas. */
+export const darkStoreLocations: DarkStoreLocation[] = channelNames.flatMap((channel, channelIndex) =>
+  (citiesByChannel[channel] ?? []).flatMap((city) => {
     const areas = areasByCity[city] ?? [city]
     return [0, 1].map((i) => {
-      const area = areas[(cityIndex + i) % areas.length]
+      const area = areas[(channelIndex * 2 + i) % areas.length]
       return {
         id: `${channel}-${city}-${area}`.replace(/\s+/g, "-").toLowerCase(),
         name: `${area} · ${channel}`,
