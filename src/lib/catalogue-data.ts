@@ -81,6 +81,11 @@ export interface Category {
   skus: CategorySku[]
 }
 
+/** The one always-present catch-all category — SKUs with no real category live here:
+ *  orphaned by a deleted category, or dragged in directly. Matched by this fixed id
+ *  (not by title), so renaming it never breaks the mechanism, and it can't be deleted. */
+export const UNLISTED_CATEGORY_ID = "cat-unlisted"
+
 /** The known quick-commerce channels — used to seed platform/dark-store options and to
  *  compute real per-channel coverage below. Values live on each SKU's darkStoreAvailability. */
 export const channelNames = ["Amazon Now", "Blinkit", "BigBasket", "Instamart", "Zepto"]
@@ -144,17 +149,24 @@ const nextSkus = (count: number, stores = 4) =>
   Array.from({ length: count }, () => makeSku(products[productCursor++ % products.length], stores))
 
 export const initialCategories: Category[] = [
-  { id: "cat-1", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Active", skus: nextSkus(4) },
-  { id: "cat-2", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Active", skus: nextSkus(3) },
-  { id: "cat-3", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Active", skus: nextSkus(3) },
-  { id: "cat-4", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Active", skus: nextSkus(2) },
-  { id: "cat-5", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Active", skus: nextSkus(3) },
-  { id: "cat-6", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Active", skus: nextSkus(3) },
-  { id: "cat-7", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
-  { id: "cat-8", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 4, status: "Discontinued", skus: [] },
-  { id: "cat-9", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
-  { id: "cat-10", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
-  { id: "cat-11", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 2, status: "Active", skus: nextSkus(2) },
+  { id: "cat-1", title: "Classic Potato Chips", description: "Everyday flagship flavours across every pack size.", itemCount: 10, status: "Active", skus: nextSkus(10) },
+  { id: "cat-2", title: "Wavy Cut Range", description: "Ridged-cut chips for a heartier bite.", itemCount: 6, status: "Active", skus: nextSkus(5) },
+  { id: "cat-3", title: "Gourmet Selection", description: "Premium adult-skewing flavours in smaller batches.", itemCount: 8, status: "Active", skus: nextSkus(8) },
+  { id: "cat-4", title: "Maxx Extreme Flavours", description: "Bold, youth-targeted spicy range.", itemCount: 8, status: "Active", skus: nextSkus(8) },
+  { id: "cat-5", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 6, status: "Active", skus: nextSkus(6) },
+  { id: "cat-6", title: "Party Packs & Family Sharing", description: "200g+ sharing packs for gatherings.", itemCount: 8, status: "Active", skus: nextSkus(7) },
+  { id: "cat-7", title: "Quick-Commerce Exclusives", description: "SKUs tuned for 10-minute delivery baskets.", itemCount: 10, status: "Active", skus: nextSkus(10) },
+  { id: "cat-8", title: "Modern Trade / Supermarket", description: "Assortment stocked in large-format retail.", itemCount: 10, status: "Active", skus: nextSkus(9) },
+  { id: "cat-9", title: "E-commerce Bulk Packs", description: "Multi-pack cartons sold online.", itemCount: 6, status: "Active", skus: nextSkus(6) },
+  { id: "cat-10", title: "Airport & Travel Retail", description: "Premium single-serve packs for travel outlets.", itemCount: 5, status: "Active", skus: nextSkus(5) },
+  { id: "cat-11", title: "Regional Flavours — South India", description: "Flavours indexed for southern markets.", itemCount: 6, status: "Active", skus: nextSkus(6) },
+  { id: "cat-12", title: "Regional Flavours — North India", description: "Flavours indexed for northern markets.", itemCount: 6, status: "Active", skus: nextSkus(6) },
+  { id: "cat-13", title: "Seasonal / Limited Edition", description: "Upcoming seasonal drops, not yet live.", itemCount: 5, status: "Planning", skus: nextSkus(3) },
+  { id: "cat-14", title: "Diwali Limited Edition", description: "Festive packaging drop for Diwali.", itemCount: 4, status: "Planning", skus: nextSkus(2) },
+  { id: "cat-15", title: "Discontinued / Legacy SKUs", description: "Phased-out flavours kept for historical reference.", itemCount: 4, status: "Discontinued", skus: [] },
+  // Always-present catch-all — seeded with the tail of the catalogue that isn't pinned
+  // anywhere else yet, so the feature has real content from the start.
+  { id: UNLISTED_CATEGORY_ID, title: "Unlisted", description: "SKUs not currently pinned to any category.", itemCount: 9, status: "Active", skus: nextSkus(9) },
 ]
 
 /** One thing on the board that needs a look — either a category or a specific SKU. The

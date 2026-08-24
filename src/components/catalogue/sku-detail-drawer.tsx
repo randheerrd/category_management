@@ -11,7 +11,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { StockStatus } from "@/lib/catalogue-data"
+import { UNLISTED_CATEGORY_ID, type StockStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 import { channelLogos } from "@/lib/channel-logos"
 
@@ -154,17 +154,19 @@ export function SkuDetailDrawer() {
               {/* This data model pins a SKU to a single category, so there's only ever one tag here. */}
               <span className="inline-flex items-center gap-1 rounded-md border-[0.5px] border-emerald-600/10 bg-emerald-600/5 px-1.5 py-0.5 text-xs font-medium text-emerald-800">
                 {category.title}
-                <button
-                  type="button"
-                  onClick={() => {
-                    bulkRemoveFromCategory([sku.id])
-                    closeSkuDetail()
-                  }}
-                  aria-label={`Unpin from ${category.title}`}
-                  className="text-emerald-800/60 hover:text-emerald-800"
-                >
-                  <X className="size-3" />
-                </button>
+                {category.id !== UNLISTED_CATEGORY_ID && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      bulkRemoveFromCategory([sku.id])
+                      closeSkuDetail()
+                    }}
+                    aria-label={`Unpin from ${category.title}`}
+                    className="text-emerald-800/60 hover:text-emerald-800"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </span>
             </div>
           </div>

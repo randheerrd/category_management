@@ -1,21 +1,22 @@
-import { FolderInput, FolderPlus, Folder, X } from "lucide-react"
+import { FolderInput, Folder, X } from "lucide-react"
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { CategoryPickerPopover } from "@/components/catalogue/category-picker-popover"
+import { UNLISTED_CATEGORY_ID } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 /** Floating bulk-action bar shown above the table once one or more SKUs are selected. */
 export function SelectionActionBar() {
-  const { selectedSkuIds, clearSelection, bulkMoveToCategory, bulkRemoveFromCategory, categories } = useCatalogue()
+  const { selectedSkuIds, clearSelection, bulkRemoveFromCategory, categories } = useCatalogue()
   const count = selectedSkuIds.size
 
   if (count === 0) return null
 
   const selectedIds = Array.from(selectedSkuIds)
+
+  // "Remove from category" moves SKUs to Unlisted — meaningless when the whole
+  // selection is already sitting there, so the action just isn't offered then.
+  const selectionOwnerIds = selectedIds.map((id) => categories.find((c) => c.skus.some((s) => s.id === id))?.id)
+  const allAlreadyUnlisted = selectionOwnerIds.every((id) => id === UNLISTED_CATEGORY_ID)
 
   return (
     <div className="pointer-events-none sticky bottom-6 z-20 flex w-full justify-center">
@@ -23,50 +24,26 @@ export function SelectionActionBar() {
         <span className="whitespace-nowrap">{count} Selected</span>
         <span className="h-4 w-px bg-white/20" />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <button type="button" className="flex items-center gap-1.5 whitespace-nowrap hover:text-white/80">
-                <FolderInput className="size-4" />
-                Move to
-              </button>
-            }
-          />
-          <DropdownMenuContent align="center" side="top">
-            {categories.map((category) => (
-              <DropdownMenuItem key={category.id} onClick={() => bulkMoveToCategory(selectedIds, category.id)}>
-                {category.title}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <CategoryPickerPopover
+          skuIds={selectedIds}
+          trigger={
+            <button type="button" className="flex items-center gap-1.5 whitespace-nowrap hover:text-white/80">
+              <FolderInput className="size-4" />
+              Move to
+            </button>
+          }
+        />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <button type="button" className="flex items-center gap-1.5 whitespace-nowrap hover:text-white/80">
-                <FolderPlus className="size-4" />
-                Add to Category
-              </button>
-            }
-          />
-          <DropdownMenuContent align="center" side="top">
-            {categories.map((category) => (
-              <DropdownMenuItem key={category.id} onClick={() => bulkMoveToCategory(selectedIds, category.id)}>
-                {category.title}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <button
-          type="button"
-          onClick={() => bulkRemoveFromCategory(selectedIds)}
-          className="flex items-center gap-1.5 whitespace-nowrap hover:text-white/80"
-        >
-          <Folder className="size-4" />
-          Remove From category
-        </button>
+        {!allAlreadyUnlisted && (
+          <button
+            type="button"
+            onClick={() => bulkRemoveFromCategory(selectedIds)}
+            className="flex items-center gap-1.5 whitespace-nowrap hover:text-white/80"
+          >
+            <Folder className="size-4" />
+            Remove From category
+          </button>
+        )}
 
         <span className="h-4 w-px bg-white/20" />
 

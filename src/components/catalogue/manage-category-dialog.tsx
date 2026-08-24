@@ -11,7 +11,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { CategoryStatus } from "@/lib/catalogue-data"
+import { UNLISTED_CATEGORY_ID, type CategoryStatus } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 const statusOptions: CategoryStatus[] = ["Active", "Planning", "Discontinued"]
@@ -34,6 +34,7 @@ export function ManageCategoryDialog() {
 
   if (!category) return null
 
+  const isUnlisted = category.id === UNLISTED_CATEGORY_ID
   const canSubmit = title.trim().length > 0
 
   const handleSave = () => {
@@ -92,20 +93,26 @@ export function ManageCategoryDialog() {
           </div>
 
           <p className="rounded-lg bg-muted px-3 py-2.5 text-sm text-muted-foreground">
-            Deleting a category never deletes its SKUs — they fall back to Unsorted.
+            {isUnlisted
+              ? "This is where SKUs land when their category is deleted or unpinned — it can't be removed."
+              : "Deleting a category never deletes its SKUs — they fall back to Unlisted."}
           </p>
         </div>
 
         <div className="-mx-4 -mb-4 flex items-center justify-between gap-2 border-t border-border p-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => deleteCategory(category.id)}
-            aria-label="Delete category"
-            className="border-destructive/20 text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          {isUnlisted ? (
+            <span />
+          ) : (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => deleteCategory(category.id)}
+              aria-label="Delete category"
+              className="border-destructive/20 text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          )}
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={closeManageCategory}>
               Cancel

@@ -5,6 +5,7 @@ import {
   makeSku,
   createSku,
   skuMatchesFilters,
+  UNLISTED_CATEGORY_ID,
   type Category,
   type CategorySku,
   type CategoryStatus,
@@ -77,6 +78,7 @@ interface CatalogueContextValue {
   clearSelection: () => void
   bulkMoveToCategory: (skuIds: string[], toCategoryId: string) => void
   bulkRemoveFromCategory: (skuIds: string[]) => void
+  createCategoryAndMove: (skuIds: string[], input: { title: string; description: string; status: CategoryStatus }) => void
   showAnalyticsPanel: boolean
   toggleAnalyticsPanel: () => void
   selectedSkuId: string | null
@@ -211,10 +213,15 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     if (existing) toast(`Saved "${patch.title ?? existing.title}"`)
   }
 
-  // The deleted category's SKUs aren't discarded — they land in an "Unsorted" category,
-  // creating it on the fly the first time it's needed (never shown until then).
-  const UNSORTED_TITLE = "Unsorted"
+  // The deleted category's SKUs aren't discarded — they land in the always-present
+  // "Unlisted" category (matched by its fixed id, not title, so renaming it is safe).
+  // Unlisted itself can't be deleted — there'd be nowhere left for its SKUs to fall back to.
   const deleteCategory = (categoryId: string) => {
+    if (categoryId === UNLISTED_CATEGORY_ID) {
+      toast.error("Can't delete Unlisted", { description: "It's where orphaned SKUs land." })
+      return
+    }
+
     const target = categories.find((c) => c.id === categoryId)
     if (!target) return
 
@@ -222,20 +229,21 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       const withoutTarget = prev.filter((c) => c.id !== categoryId)
       if (target.skus.length === 0) return withoutTarget
 
-      const existingUnsorted = withoutTarget.find((c) => c.title === UNSORTED_TITLE)
-      if (existingUnsorted) {
+      const unlisted = withoutTarget.find((c) => c.id === UNLISTED_CATEGORY_ID)
+      if (unlisted) {
         return withoutTarget.map((c) =>
-          c.id === existingUnsorted.id
+          c.id === UNLISTED_CATEGORY_ID
             ? { ...c, itemCount: c.itemCount + target.skus.length, skus: [...c.skus, ...target.skus] }
             : c
         )
       }
+      // Defensive fallback — Unlisted is always seeded, but re-create it if it's ever missing.
       return [
         ...withoutTarget,
         {
-          id: `cat-unsorted-${Date.now()}`,
-          title: UNSORTED_TITLE,
-          description: "SKUs from deleted categories land here.",
+          id: UNLISTED_CATEGORY_ID,
+          title: "Unlisted",
+          description: "SKUs not currently pinned to any category.",
           itemCount: target.skus.length,
           status: "Active",
           skus: target.skus,
@@ -244,7 +252,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     })
     setManageCategoryId(null)
     toast.error(`Deleted "${target.title}"`, {
-      description: target.skus.length > 0 ? `${target.skus.length} SKU(s) moved to Unsorted.` : undefined,
+      description: target.skus.length > 0 ? `${target.skus.length} SKU(s) moved to Unlisted.` : undefined,
     })
   }
 
@@ -422,17 +430,55 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  // "Remove from category" doesn't orphan SKUs into the void — it moves them to the
+  // always-present Unlisted category, same destination a deleted category falls back to.
   const bulkRemoveFromCategory = (skuIds: string[]) => {
     setCategories((prev) => {
       const idSet = new Set(skuIds)
-      return prev.map((c) => {
+      const moved: Category["skus"] = []
+      const withoutMoved = prev.map((c) => {
         const kept = c.skus.filter((s) => !idSet.has(s.id))
-        if (kept.length === c.skus.length) return c
-        return { ...c, itemCount: Math.max(0, c.itemCount - (c.skus.length - kept.length)), skus: kept }
+        moved.push(...c.skus.filter((s) => idSet.has(s.id)))
+        return kept.length === c.skus.length ? c : { ...c, itemCount: Math.max(0, c.itemCount - (c.skus.length - kept.length)), skus: kept }
       })
+      return withoutMoved.map((c) =>
+        c.id === UNLISTED_CATEGORY_ID ? { ...c, itemCount: c.itemCount + moved.length, skus: [...c.skus, ...moved] } : c
+      )
     })
     clearSelection()
-    toast.error(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`)
+    toast.error(`Removed ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"} from category`, {
+      description: "Moved to Unlisted.",
+    })
+  }
+
+  // "Move to" in the bulk selection bar can target a brand-new category — creates it and
+  // moves the selection into it in one atomic update instead of two separate actions.
+  const createCategoryAndMove = (
+    skuIds: string[],
+    input: { title: string; description: string; status: CategoryStatus }
+  ) => {
+    setCategories((prev) => {
+      const idSet = new Set(skuIds)
+      const moved: Category["skus"] = []
+      const withoutMoved = prev.map((c) => {
+        const kept = c.skus.filter((s) => !idSet.has(s.id))
+        moved.push(...c.skus.filter((s) => idSet.has(s.id)))
+        return kept.length === c.skus.length ? c : { ...c, itemCount: Math.max(0, c.itemCount - (c.skus.length - kept.length)), skus: kept }
+      })
+      return [
+        ...withoutMoved,
+        {
+          id: `cat-${Date.now()}`,
+          title: input.title,
+          description: input.description,
+          itemCount: moved.length,
+          status: input.status,
+          skus: moved,
+        },
+      ]
+    })
+    clearSelection()
+    toast(`Created "${input.title}"`, { description: `${skuIds.length} SKU(s) moved here.` })
   }
 
   const visibleCategories = useMemo(() => {
@@ -570,6 +616,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     clearSelection,
     bulkMoveToCategory,
     bulkRemoveFromCategory,
+    createCategoryAndMove,
     showAnalyticsPanel,
     toggleAnalyticsPanel,
     selectedSkuId,
