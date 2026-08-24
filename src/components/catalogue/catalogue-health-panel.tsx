@@ -44,11 +44,11 @@ const activityIconMeta: Record<ActivityType, { icon: LucideIcon; className: stri
   import: { icon: UploadCloud, className: "bg-sky-600/10 text-sky-700" },
 }
 
-function ActivityIcon({ type }: { type: ActivityType }) {
+function ActivityIcon({ type, iconClassName = "size-4" }: { type: ActivityType; iconClassName?: string }) {
   const { icon: Icon, className } = activityIconMeta[type]
   return (
     <div className={`flex size-8 shrink-0 items-center justify-center rounded-full ${className}`}>
-      <Icon className="size-4" />
+      <Icon className={iconClassName} />
     </div>
   )
 }
@@ -372,12 +372,12 @@ export function CatalogueHealthPanel() {
             {activity.slice(0, 20).map((entry, index, arr) => (
               <div key={entry.id} className="flex w-full items-stretch gap-3">
                 <div className="flex shrink-0 flex-col items-center">
-                  <ActivityIcon type={entry.type} />
+                  <ActivityIcon type={entry.type} iconClassName="size-5" />
                   {index < arr.length - 1 && (
                     <div className="my-1 w-px flex-1 border-l border-dashed border-border" />
                   )}
                 </div>
-                <div className="flex flex-col gap-0.5 pb-4">
+                <div className="flex flex-col gap-0.5 pb-3">
                   <p className="text-sm leading-5 font-medium text-foreground">{entry.message}</p>
                   <p className="text-xs leading-4 text-muted-foreground">{timeAgo(entry.timestamp)}</p>
                 </div>
