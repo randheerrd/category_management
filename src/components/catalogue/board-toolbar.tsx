@@ -31,11 +31,11 @@ export function BoardToolbar() {
         <button
           type="button"
           onClick={allCollapsed ? expandAll : collapseAll}
-          title={allCollapsed ? "Expand all" : "Collapse all"}
           aria-label={allCollapsed ? "Expand all categories" : "Collapse all categories"}
-          className="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-background text-foreground hover:bg-muted"
+          className="flex h-8 min-w-16 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm font-medium text-foreground hover:bg-muted"
         >
           {allCollapsed ? <ChevronsUpDown className="size-4" /> : <ChevronsDownUp className="size-4" />}
+          {allCollapsed ? "Expand all" : "Collapse all"}
         </button>
 
         <div id="tour-filters">
