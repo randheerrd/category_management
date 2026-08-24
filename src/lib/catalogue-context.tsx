@@ -79,6 +79,7 @@ interface CatalogueContextValue {
   setSelectedSkuIds: (ids: Set<string>) => void
   clearSelection: () => void
   bulkMoveToCategory: (skuIds: string[], toCategoryId: string) => void
+  bulkMoveToCategories: (skuIds: string[], toCategoryIds: string[]) => void
   bulkRemoveFromCategory: (skuIds: string[]) => void
   /** Adds a SKU into an additional category without touching its existing pins. */
   pinSkuToCategory: (skuId: string, categoryId: string) => void
@@ -495,6 +496,38 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  // Multi-target version of bulkMoveToCategory — the selection bar's "Move to" dialog lets
+  // a user pick several destination categories at once, so this re-pins each selected SKU
+  // into every chosen category (same object reference, like createProduct does), replacing
+  // whatever categories it was in before.
+  const bulkMoveToCategories = (skuIds: string[], toCategoryIds: string[]) => {
+    if (toCategoryIds.length === 0) return
+    const destinations = categories.filter((c) => toCategoryIds.includes(c.id))
+    const movedSku = categories.flatMap((c) => c.skus).find((s) => s.id === skuIds[0])
+    const destIdSet = new Set(toCategoryIds)
+    setCategories((prev) => {
+      const idSet = new Set(skuIds)
+      const moved: Category["skus"] = []
+      const withoutMoved = prev.map((c) => {
+        const kept = c.skus.filter((s) => !idSet.has(s.id))
+        moved.push(...c.skus.filter((s) => idSet.has(s.id)))
+        return kept.length === c.skus.length ? c : { ...c, itemCount: Math.max(0, c.itemCount - (c.skus.length - kept.length)), skus: kept }
+      })
+      return withoutMoved.map((c) =>
+        destIdSet.has(c.id) ? { ...c, itemCount: c.itemCount + moved.length, skus: [...c.skus, ...moved] } : c
+      )
+    })
+    clearSelection()
+    const destinationLabel = destinations.map((d) => d.title).join(", ")
+    toast(`Moved ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`, { description: `To ${destinationLabel}` })
+    logActivity(
+      skuIds.length === 1 && movedSku
+        ? `Move ${movedSku.name} to ${destinationLabel}`
+        : `Move ${skuIds.length} SKUs to ${destinationLabel}`,
+      "move"
+    )
+  }
+
   // "Remove from category" doesn't orphan SKUs into the void — it moves them to the
   // always-present Unlisted category, same destination a deleted category falls back to.
   const bulkRemoveFromCategory = (skuIds: string[]) => {
@@ -717,6 +750,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     setSelectedSkuIds,
     clearSelection,
     bulkMoveToCategory,
+    bulkMoveToCategories,
     bulkRemoveFromCategory,
     pinSkuToCategory,
     unpinSkuFromCategory,

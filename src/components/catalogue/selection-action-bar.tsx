@@ -1,12 +1,14 @@
+import { useState } from "react"
 import { FolderInput, Folder, X } from "lucide-react"
 
-import { CategoryPickerPopover } from "@/components/catalogue/category-picker-popover"
+import { MoveToDialog } from "@/components/catalogue/move-to-dialog"
 import { UNLISTED_CATEGORY_ID } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
 
 /** Floating bulk-action bar shown above the table once one or more SKUs are selected. */
 export function SelectionActionBar() {
   const { selectedSkuIds, clearSelection, bulkRemoveFromCategory, categories } = useCatalogue()
+  const [moveToOpen, setMoveToOpen] = useState(false)
   const count = selectedSkuIds.size
 
   if (count === 0) return null
@@ -24,15 +26,14 @@ export function SelectionActionBar() {
         <span className="whitespace-nowrap">{count} Selected</span>
         <span className="h-4 w-px bg-white/20" />
 
-        <CategoryPickerPopover
-          skuIds={selectedIds}
-          trigger={
-            <button type="button" className="flex items-center gap-1.5 whitespace-nowrap hover:text-white/80">
-              <FolderInput className="size-4" />
-              Move to
-            </button>
-          }
-        />
+        <button
+          type="button"
+          onClick={() => setMoveToOpen(true)}
+          className="flex items-center gap-1.5 whitespace-nowrap hover:text-white/80"
+        >
+          <FolderInput className="size-4" />
+          Move to
+        </button>
 
         {!allAlreadyUnlisted && (
           <button
@@ -52,6 +53,8 @@ export function SelectionActionBar() {
           Clear
         </button>
       </div>
+
+      <MoveToDialog open={moveToOpen} onOpenChange={setMoveToOpen} skuIds={selectedIds} />
     </div>
   )
 }
