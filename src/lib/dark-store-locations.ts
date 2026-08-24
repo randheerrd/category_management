@@ -1,5 +1,3 @@
-import { channelNames } from "@/lib/catalogue-data"
-
 /** A single physical dark store, for the Filters drawer's "Dark Store" picker.
  *  The per-SKU coverage data (darkStoreAvailability) only tracks filled/total per
  *  channel, not per physical location, so picking specific stores here filters by
@@ -12,34 +10,38 @@ export interface DarkStoreLocation {
   channel: string
 }
 
-// Limited to Delhi NCR only, per request — every channel runs stores here.
-const citiesByChannel: Record<string, string[]> = {
-  "Amazon Now": ["Delhi NCR"],
-  Blinkit: ["Delhi NCR"],
-  BigBasket: ["Delhi NCR"],
-  Instamart: ["Delhi NCR"],
-  Zepto: ["Delhi NCR"],
-}
+/** Delhi NCR, broken out by sub-city — coverage is intentionally uneven (Faridabad and
+ *  Meerut only have one channel each) rather than every channel appearing everywhere. */
+const rawLocations: { city: string; channel: string; area: string }[] = [
+  { city: "Gurugram", channel: "Blinkit", area: "DLF Phase 3" },
+  { city: "Gurugram", channel: "Zepto", area: "Sector 29" },
+  { city: "Gurugram", channel: "Instamart", area: "Sohna Road" },
+  { city: "Gurugram", channel: "Amazon Now", area: "Cyber City" },
+  { city: "Gurugram", channel: "BigBasket", area: "Sector 14" },
 
-const areasByCity: Record<string, string[]> = {
-  "Delhi NCR": ["Connaught Place", "Gurugram", "Noida", "Dwarka", "Rohini", "Saket"],
-}
+  { city: "Noida", channel: "Blinkit", area: "Sector 62" },
+  { city: "Noida", channel: "Zepto", area: "Sector 18" },
+  { city: "Noida", channel: "Instamart", area: "Sector 137" },
+  { city: "Noida", channel: "Amazon Now", area: "Sector 18" },
+  { city: "Noida", channel: "BigBasket", area: "Sector 50" },
 
-/** Two stores per city per channel, cycling through that city's named areas — offset by
- *  the channel's own index so different channels land on different areas. */
-export const darkStoreLocations: DarkStoreLocation[] = channelNames.flatMap((channel, channelIndex) =>
-  (citiesByChannel[channel] ?? []).flatMap((city) => {
-    const areas = areasByCity[city] ?? [city]
-    return [0, 1].map((i) => {
-      const area = areas[(channelIndex * 2 + i) % areas.length]
-      return {
-        id: `${channel}-${city}-${area}`.replace(/\s+/g, "-").toLowerCase(),
-        name: `${area} · ${channel}`,
-        city,
-        channel,
-      }
-    })
-  })
-)
+  { city: "Delhi", channel: "Blinkit", area: "Lajpat Nagar" },
+  { city: "Delhi", channel: "Blinkit", area: "Connaught Place" },
+  { city: "Delhi", channel: "Zepto", area: "Karol Bagh" },
+  { city: "Delhi", channel: "Instamart", area: "Dwarka" },
+  { city: "Delhi", channel: "Amazon Now", area: "Rohini" },
+  { city: "Delhi", channel: "BigBasket", area: "Saket" },
+
+  { city: "Faridabad", channel: "Blinkit", area: "Sector 15" },
+
+  { city: "Meerut", channel: "Zepto", area: "Meerut Cantt" },
+]
+
+export const darkStoreLocations: DarkStoreLocation[] = rawLocations.map(({ city, channel, area }) => ({
+  id: `${channel}-${city}-${area}`.replace(/\s+/g, "-").toLowerCase(),
+  name: `${channel} — ${area}`,
+  city,
+  channel,
+}))
 
 export const darkStoreCities = [...new Set(darkStoreLocations.map((l) => l.city))]
