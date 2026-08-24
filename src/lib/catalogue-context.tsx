@@ -206,7 +206,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
           price: row.price,
           weightGrams: row.weightGrams,
           stock: row.stock,
-          platform: row.platform,
+          platforms: [row.platform],
         })
 
         const existingIndex = next.findIndex((c) => c.title.toLowerCase() === key)

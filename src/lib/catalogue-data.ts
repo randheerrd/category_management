@@ -13,6 +13,7 @@ export interface CategorySku {
   id: string
   name: string
   image: string
+  description: string
   price: number
   weightGrams: number
   stores: number
@@ -144,6 +145,7 @@ export function makeSku(product: Product): CategorySku {
     id: `sku-${skuSeq}`,
     name: product.name,
     image: product.image,
+    description: "",
     price: product.price,
     weightGrams: product.weightGrams,
     // "Stores" everywhere else in the UI (card badge, table column) is derived from this
@@ -161,11 +163,15 @@ export function makeSku(product: Product): CategorySku {
 export interface NewProductInput {
   name: string
   image?: string
+  description?: string
   mrp: number
   price: number
   weightGrams: number
   stock: StockStatus
-  platform: string
+  platforms: string[]
+  /** Explicit store picks from the "New Product" drawer; falls back to a random spread
+   *  (e.g. for CSV rows, which don't carry per-store detail) when omitted. */
+  stockedStoreIds?: string[]
 }
 
 /**
@@ -175,7 +181,7 @@ export interface NewProductInput {
  */
 export function createSku(input: NewProductInput): CategorySku {
   skuSeq += 1
-  const stockedStoreIds = randomStockedStoreIds()
+  const stockedStoreIds = input.stockedStoreIds ?? randomStockedStoreIds()
   const darkStoreAvailability = computeDarkStoreAvailability(stockedStoreIds)
   const filled = stockedStoreIds.length
   const total = darkStoreLocations.length
@@ -183,11 +189,12 @@ export function createSku(input: NewProductInput): CategorySku {
     id: `sku-${skuSeq}`,
     name: input.name,
     image: input.image ?? findProductImageByName(input.name) ?? products[skuSeq % products.length].image,
+    description: input.description ?? "",
     price: input.price,
     weightGrams: input.weightGrams,
     stores: filled,
     mrp: input.mrp,
-    platforms: [input.platform],
+    platforms: input.platforms.length > 0 ? input.platforms : [platformCycle[0]],
     darkStores: `${filled}/${total}`,
     stock: input.stock,
     darkStoreAvailability,
