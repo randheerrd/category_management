@@ -95,6 +95,7 @@ interface CatalogueContextValue {
   openSkuDetail: (skuId: string) => void
   closeSkuDetail: () => void
   updateSku: (skuId: string, patch: Partial<CategorySku>) => void
+  bulkUpdateSkus: (skuIds: string[], patch: Partial<CategorySku>) => void
   deleteSku: (skuId: string) => void
   addProductOpen: boolean
   addProductCategoryId: string | null
@@ -345,6 +346,22 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       }))
     )
     if (sku) toast(`Saved "${sku.name}"`)
+  }
+
+  // Bulk "Edit Detail" from the selection bar — applies the same patch (only the fields
+  // the user actually filled in) to every selected SKU at once, across whatever
+  // categories they happen to live in.
+  const bulkUpdateSkus = (skuIds: string[], patch: Partial<CategorySku>) => {
+    const idSet = new Set(skuIds)
+    setCategories((prev) =>
+      prev.map((c) => ({
+        ...c,
+        skus: c.skus.map((s) => (idSet.has(s.id) ? { ...s, ...patch } : s)),
+      }))
+    )
+    clearSelection()
+    toast(`Updated ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`)
+    logActivity(`Bulk edited ${skuIds.length} SKU${skuIds.length === 1 ? "" : "s"}`, "edit")
   }
 
   const deleteSku = (skuId: string) => {
@@ -786,6 +803,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     openSkuDetail,
     closeSkuDetail,
     updateSku,
+    bulkUpdateSkus,
     deleteSku,
     addProductOpen,
     addProductCategoryId,

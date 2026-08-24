@@ -11,6 +11,7 @@ import {
   FolderPlus,
   FolderX,
   UploadCloud,
+  SquarePen,
   type LucideIcon,
 } from "lucide-react"
 
@@ -42,6 +43,7 @@ const activityIconMeta: Record<ActivityType, { icon: LucideIcon; className: stri
   "category-create": { icon: FolderPlus, className: "bg-emerald-600/10 text-emerald-700" },
   "category-delete": { icon: FolderX, className: "bg-red-600/10 text-red-700" },
   import: { icon: UploadCloud, className: "bg-sky-600/10 text-sky-700" },
+  edit: { icon: SquarePen, className: "bg-slate-600/10 text-slate-700" },
 }
 
 function ActivityIcon({

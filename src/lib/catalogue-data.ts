@@ -109,6 +109,7 @@ export type ActivityType =
   | "category-create"
   | "category-delete"
   | "import"
+  | "edit"
 
 /** One line in the Catalogue Health panel's "Recent Activity" feed. */
 export interface ActivityEntry {
