@@ -380,7 +380,7 @@ export function CatalogueHealthPanel() {
             {activity.slice(0, 20).map((entry, index, arr) => (
               <div key={entry.id} className="flex w-full items-stretch gap-3">
                 <div className="flex shrink-0 flex-col items-center">
-                  <ActivityIcon type={entry.type} circleClassName="size-5" iconClassName="size-3" />
+                  <ActivityIcon type={entry.type} circleClassName="size-6" iconClassName="size-4" />
                   {index < arr.length - 1 && (
                     <div className="my-1 w-px flex-1 border-l border-dashed border-border" />
                   )}
