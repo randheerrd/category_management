@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from "react"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Pin } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -80,19 +80,34 @@ function StackCard({
     >
       <div className="flex items-start justify-between gap-2">
         <img src={sku.image} alt="" draggable={false} className="size-10 shrink-0 rounded-[6px] object-cover" />
-        <span
-          draggable={false}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          // Checkbox's invisible hit-target extends well past its visible box (bigger
-          // tap target) — without clipping it here, that hover/click area bleeds into
-          // the image next to it, so hovering the image itself shows a pointer cursor
-          // as if it were part of the checkbox. size-4 + overflow-hidden masks it back
-          // down to just the checkbox's own bounds. cursor-pointer overrides the card's
-          // cursor-grab (it's draggable) so the checkbox reads as clickable, not "grab".
-          className="flex size-4 shrink-0 cursor-pointer items-center overflow-hidden"
-        >
-          <Checkbox checked={selected} onCheckedChange={onToggleSelected} />
+        <span className="flex items-center gap-1">
+          {otherCategoryTitles.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="flex shrink-0 items-center gap-0.5 rounded-md border-[0.5px] border-primary/20 bg-primary/5 px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap text-primary">
+                    <Pin className="size-3" />
+                    {otherCategoryTitles.length + 1}
+                  </span>
+                }
+              />
+              <TooltipContent side="bottom">Also in: {otherCategoryTitles.join(", ")}</TooltipContent>
+            </Tooltip>
+          )}
+          <span
+            draggable={false}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            // Checkbox's invisible hit-target extends well past its visible box (bigger
+            // tap target) — without clipping it here, that hover/click area bleeds into
+            // the image next to it, so hovering the image itself shows a pointer cursor
+            // as if it were part of the checkbox. size-4 + overflow-hidden masks it back
+            // down to just the checkbox's own bounds. cursor-pointer overrides the card's
+            // cursor-grab (it's draggable) so the checkbox reads as clickable, not "grab".
+            className="flex size-4 shrink-0 cursor-pointer items-center overflow-hidden"
+          >
+            <Checkbox checked={selected} onCheckedChange={onToggleSelected} />
+          </span>
         </span>
       </div>
       <div className="flex flex-col gap-0.5">
@@ -100,16 +115,6 @@ function StackCard({
         <p className="text-xs leading-4 text-muted-foreground">
           ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Store{sku.stores === 1 ? "" : "s"}
         </p>
-        {otherCategoryTitles.length > 0 && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <p className="truncate text-xs leading-4 text-primary">Also in: {otherCategoryTitles.join(", ")}</p>
-              }
-            />
-            <TooltipContent side="bottom">Pinned in {otherCategoryTitles.length + 1} categories</TooltipContent>
-          </Tooltip>
-        )}
       </div>
     </div>
   )

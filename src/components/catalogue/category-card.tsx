@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from "react"
-import { ChevronDown, Plus, GripVertical } from "lucide-react"
+import { ChevronDown, Plus, GripVertical, Pin } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -87,19 +87,20 @@ function SkuRow({
         <p className="text-xs leading-4 text-muted-foreground">
           ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Store{sku.stores === 1 ? "" : "s"}
         </p>
-        {otherCategoryTitles.length > 0 && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <p className="max-w-full truncate text-xs leading-4 text-primary">
-                  Also in: {otherCategoryTitles.join(", ")}
-                </p>
-              }
-            />
-            <TooltipContent side="bottom">Pinned in {otherCategoryTitles.length + 1} categories</TooltipContent>
-          </Tooltip>
-        )}
       </div>
+      {otherCategoryTitles.length > 0 && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="flex shrink-0 items-center gap-0.5 rounded-md border-[0.5px] border-primary/20 bg-primary/5 px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap text-primary">
+                <Pin className="size-3" />
+                {otherCategoryTitles.length + 1}
+              </span>
+            }
+          />
+          <TooltipContent side="bottom">Also in: {otherCategoryTitles.join(", ")}</TooltipContent>
+        </Tooltip>
+      )}
       <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/sku:opacity-100">
         <GripVertical className="size-3.5 text-muted-foreground/50" />
       </span>
