@@ -89,7 +89,7 @@ function SkuRow({
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <span className="flex h-4 shrink-0 items-center gap-1 rounded-full border-[0.5px] border-stone-500/10 bg-stone-500/5 px-2 text-xs leading-4 font-medium whitespace-nowrap text-stone-800">
+                  <span className="flex h-4 shrink-0 items-center gap-1 rounded-full border-[0.5px] border-stone-500/10 bg-stone-500/5 py-0 pr-2 pl-1 text-xs leading-4 font-medium whitespace-nowrap text-stone-800">
                     <Pin className="size-3" fill="currentColor" />
                     {otherCategoryTitles.length + 1}
                   </span>
