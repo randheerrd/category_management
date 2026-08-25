@@ -46,7 +46,7 @@ function categoryMatchesSearch(category: Category, queryTokens: string[]): boole
   })
 }
 
-export type BoardView = "grid" | "table"
+export type BoardView = "grid" | "table" | "graph"
 
 interface CatalogueContextValue {
   categories: Category[]
@@ -108,6 +108,12 @@ interface CatalogueContextValue {
   toggleSkuSelected: (skuId: string) => void
   setSelectedSkuIds: (ids: Set<string>) => void
   clearSelection: () => void
+  /** The SKU id currently hovered on the board, for cross-highlighting its other pins. */
+  hoveredSkuId: string | null
+  setHoveredSkuId: (skuId: string | null) => void
+  /** Clears the hover only if `skuId` is still the one hovered — guards against a leave
+   *  event for the old row firing after the enter event for the next one already set it. */
+  clearHoveredSkuId: (skuId: string) => void
   bulkMoveToCategory: (skuIds: string[], toCategoryId: string) => void
   bulkMoveToCategories: (skuIds: string[], toCategoryIds: string[]) => void
   bulkRemoveFromCategory: (skuIds: string[]) => void
@@ -176,6 +182,13 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   const [date] = useState<Date>(new Date(2026, 7, 12))
   const [groupByCategory, setGroupByCategory] = useState(true)
   const [selectedSkuIds, setSelectedSkuIds] = useState<Set<string>>(new Set())
+  // Which SKU (by id, not by row) is currently hovered on the board — lets every card
+  // sharing that same SKU id cross-highlight, so a multi-pinned SKU's other instances
+  // are visible without opening its detail drawer.
+  const [hoveredSkuId, setHoveredSkuId] = useState<string | null>(null)
+  const clearHoveredSkuId = (skuId: string) => {
+    setHoveredSkuId((prev) => (prev === skuId ? null : prev))
+  }
   const [showAnalyticsPanel, setShowAnalyticsPanel] = useState(true)
   const [selectedSkuId, setSelectedSkuId] = useState<string | null>(null)
   const [addProductOpen, setAddProductOpen] = useState(false)
@@ -913,6 +926,9 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     selectedSkuIds,
     toggleSkuSelected,
     setSelectedSkuIds,
+    hoveredSkuId,
+    setHoveredSkuId,
+    clearHoveredSkuId,
     clearSelection,
     bulkMoveToCategory,
     bulkMoveToCategories,

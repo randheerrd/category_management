@@ -13,6 +13,11 @@ interface SkuRowProps {
   selected: boolean
   onToggleSelected: () => void
   onOpenDetail: () => void
+  /** Titles of the other categories this same SKU is also pinned to, if any. */
+  otherCategoryTitles: string[]
+  highlighted: boolean
+  onHoverStart: () => void
+  onHoverEnd: () => void
 }
 
 /**
@@ -21,7 +26,17 @@ interface SkuRowProps {
  * suppresses the click, and with the checkbox click since that has its own stopPropagation
  * plus an explicit draggable={false} to opt its subtree out of the row's drag.
  */
-function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: SkuRowProps) {
+function SkuRow({
+  sku,
+  categoryId,
+  selected,
+  onToggleSelected,
+  onOpenDetail,
+  otherCategoryTitles,
+  highlighted,
+  onHoverStart,
+  onHoverEnd,
+}: SkuRowProps) {
   const rowRef = useRef<HTMLDivElement>(null)
 
   const handleDragStart = (e: DragEvent) => {
@@ -56,10 +71,14 @@ function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: S
       draggable
       onDragStart={handleDragStart}
       onClick={onOpenDetail}
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
       className={`group/sku flex w-full cursor-grab items-center gap-1.5 rounded-lg border px-2 py-2 select-none transition-colors active:cursor-grabbing ${
-        selected
-          ? "border-primary/30 bg-primary/5"
-          : "border-slate-100 bg-[rgba(241,245,249,0.4)] hover:border-slate-200 hover:bg-[rgba(241,245,249,0.9)]"
+        highlighted
+          ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+          : selected
+            ? "border-primary/30 bg-primary/5"
+            : "border-slate-100 bg-[rgba(241,245,249,0.4)] hover:border-slate-200 hover:bg-[rgba(241,245,249,0.9)]"
       }`}
     >
       <img src={sku.image} alt="" draggable={false} className="size-8 shrink-0 rounded-[3.667px] object-cover" />
@@ -68,6 +87,18 @@ function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: S
         <p className="text-xs leading-4 text-muted-foreground">
           ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Store{sku.stores === 1 ? "" : "s"}
         </p>
+        {otherCategoryTitles.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <p className="max-w-full truncate text-xs leading-4 text-primary">
+                  Also in: {otherCategoryTitles.join(", ")}
+                </p>
+              }
+            />
+            <TooltipContent side="bottom">Pinned in {otherCategoryTitles.length + 1} categories</TooltipContent>
+          </Tooltip>
+        )}
       </div>
       <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/sku:opacity-100">
         <GripVertical className="size-3.5 text-muted-foreground/50" />
@@ -101,6 +132,7 @@ export function CategoryCard({
   anchorId,
 }: Category & { anchorId?: string }) {
   const {
+    categories,
     collapsedIds,
     toggleCollapsed,
     openAddProduct,
@@ -109,6 +141,9 @@ export function CategoryCard({
     openSkuDetail,
     selectedSkuIds,
     toggleSkuSelected,
+    hoveredSkuId,
+    setHoveredSkuId,
+    clearHoveredSkuId,
   } = useCatalogue()
   const collapsed = collapsedIds.has(id)
   const [dragOver, setDragOver] = useState(false)
@@ -222,6 +257,12 @@ export function CategoryCard({
                 selected={selectedSkuIds.has(sku.id)}
                 onToggleSelected={() => toggleSkuSelected(sku.id)}
                 onOpenDetail={() => openSkuDetail(sku.id)}
+                otherCategoryTitles={categories
+                  .filter((c) => c.id !== id && c.skus.some((s) => s.id === sku.id))
+                  .map((c) => c.title)}
+                highlighted={hoveredSkuId === sku.id}
+                onHoverStart={() => setHoveredSkuId(sku.id)}
+                onHoverEnd={() => clearHoveredSkuId(sku.id)}
               />
             ))}
           </div>

@@ -2,6 +2,7 @@ import { useRef, useState, type DragEvent } from "react"
 import { ChevronDown } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Category } from "@/lib/catalogue-data"
 import { UNLISTED_CATEGORY_ID } from "@/lib/catalogue-data"
 import { useCatalogue } from "@/lib/catalogue-context"
@@ -9,12 +10,26 @@ import { useCatalogue } from "@/lib/catalogue-context"
 /** One Unlisted SKU rendered as a small card in the expanded stack grid — draggable
  *  onto any category card to pin it, same drag source contract (`text/sku-id` +
  *  `text/category-id`) every category card's own drop zone already understands. */
-function StackCard({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: {
+function StackCard({
+  sku,
+  categoryId,
+  selected,
+  onToggleSelected,
+  onOpenDetail,
+  otherCategoryTitles,
+  highlighted,
+  onHoverStart,
+  onHoverEnd,
+}: {
   sku: Category["skus"][number]
   categoryId: string
   selected: boolean
   onToggleSelected: () => void
   onOpenDetail: () => void
+  otherCategoryTitles: string[]
+  highlighted: boolean
+  onHoverStart: () => void
+  onHoverEnd: () => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -53,8 +68,14 @@ function StackCard({ sku, categoryId, selected, onToggleSelected, onOpenDetail }
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onOpenDetail()
       }}
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
       className={`flex cursor-grab flex-col gap-2 rounded-xl border bg-card p-2.5 text-left transition-colors active:cursor-grabbing ${
-        selected ? "border-primary/30 bg-primary/5" : "border-border hover:bg-muted/40"
+        highlighted
+          ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+          : selected
+            ? "border-primary/30 bg-primary/5"
+            : "border-border hover:bg-muted/40"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -79,6 +100,16 @@ function StackCard({ sku, categoryId, selected, onToggleSelected, onOpenDetail }
         <p className="text-xs leading-4 text-muted-foreground">
           ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Store{sku.stores === 1 ? "" : "s"}
         </p>
+        {otherCategoryTitles.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <p className="truncate text-xs leading-4 text-primary">Also in: {otherCategoryTitles.join(", ")}</p>
+              }
+            />
+            <TooltipContent side="bottom">Pinned in {otherCategoryTitles.length + 1} categories</TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </div>
   )
@@ -90,7 +121,18 @@ function StackCard({ sku, categoryId, selected, onToggleSelected, onOpenDetail }
  * SKUs out as a grid of small cards that wraps across the row and down the page.
  */
 export function UnlistedSection({ category }: { category: Category }) {
-  const { moveSku, openSkuDetail, selectedSkuIds, toggleSkuSelected, collapsedIds, toggleCollapsed } = useCatalogue()
+  const {
+    categories,
+    moveSku,
+    openSkuDetail,
+    selectedSkuIds,
+    toggleSkuSelected,
+    collapsedIds,
+    toggleCollapsed,
+    hoveredSkuId,
+    setHoveredSkuId,
+    clearHoveredSkuId,
+  } = useCatalogue()
   // Shared with every other category card's collapse state — lets the health panel's
   // "N SKUs aren't pinned" row expand this from outside instead of only toggling locally.
   const expanded = !collapsedIds.has(category.id)
@@ -141,6 +183,12 @@ export function UnlistedSection({ category }: { category: Category }) {
                 selected={selectedSkuIds.has(sku.id)}
                 onToggleSelected={() => toggleSkuSelected(sku.id)}
                 onOpenDetail={() => openSkuDetail(sku.id)}
+                otherCategoryTitles={categories
+                  .filter((c) => c.id !== category.id && c.skus.some((s) => s.id === sku.id))
+                  .map((c) => c.title)}
+                highlighted={hoveredSkuId === sku.id}
+                onHoverStart={() => setHoveredSkuId(sku.id)}
+                onHoverEnd={() => clearHoveredSkuId(sku.id)}
               />
             ))}
           </div>
