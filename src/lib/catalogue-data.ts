@@ -278,6 +278,22 @@ export const demoCategories: Category[] = [
   { id: UNLISTED_CATEGORY_ID, title: "Unlisted", description: "SKUs not currently pinned to any category.", itemCount: 9, status: "Active", skus: nextSkus(9) },
 ]
 
+// A handful of flagship SKUs realistically sell through more than one merchandising
+// list at once (e.g. a bestseller is both a "Classic" and a "Quick-Commerce Exclusive").
+// Pin a couple of real examples into a second category the same way pinSkuToCategory
+// does at runtime, so the "also pinned elsewhere" indicator has something to show for
+// out of the box instead of only appearing after a user manually cross-pins something.
+function crossPin(fromCategoryId: string, skuIndex: number, toCategoryId: string) {
+  const source = demoCategories.find((c) => c.id === fromCategoryId)
+  const destination = demoCategories.find((c) => c.id === toCategoryId)
+  const sku = source?.skus[skuIndex]
+  if (!sku || !destination || destination.skus.some((s) => s.id === sku.id)) return
+  destination.skus.push(sku)
+  destination.itemCount += 1
+}
+crossPin("cat-1", 0, "cat-7") // a flagship Classic Potato Chips SKU — also a Quick-Commerce Exclusive
+crossPin("cat-3", 0, "cat-10") // a Gourmet Selection SKU — also stocked at Airport & Travel Retail
+
 /** One thing on the board that needs a look — either a category or a specific SKU. The
  *  single source of truth behind the "N items need attention" badge, the Quick Tip, the
  *  Review Issues dialog, and Full Report's issue list, so all four always agree. */
