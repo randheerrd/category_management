@@ -102,7 +102,7 @@ function StackCard({
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <span className="flex h-4 shrink-0 items-center gap-0.5 rounded-md border-[0.5px] border-primary/20 bg-primary/5 px-1.5 text-xs leading-4 font-medium whitespace-nowrap text-primary">
+                  <span className="flex h-4 shrink-0 items-center gap-1 rounded-full border-[0.5px] border-stone-500/10 bg-stone-500/5 px-2 text-xs leading-4 font-medium whitespace-nowrap text-stone-800">
                     <Pin className="size-3" />
                     {otherCategoryTitles.length + 1}
                   </span>
