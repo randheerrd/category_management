@@ -177,7 +177,7 @@ export function makeSku(product: Product): CategorySku {
     id: `sku-${skuSeq}`,
     name: product.name,
     image: product.image,
-    description: "",
+    description: product.description,
     price: product.price,
     weightGrams: product.weightGrams,
     // "Stores" everywhere else in the UI (card badge, table column) is derived from this
@@ -250,20 +250,20 @@ const nextSkus = (count: number) =>
  *  populated board so a new user can explore the product before bringing in their own data. */
 export const demoCategories: Category[] = [
   { id: "cat-1", title: "Classic Potato Chips", description: "Everyday flagship flavours across every pack size.", itemCount: 10, status: "Active", skus: nextSkus(10) },
-  { id: "cat-2", title: "Wavy Cut Range", description: "Ridged-cut chips for a heartier bite.", itemCount: 6, status: "Active", skus: nextSkus(5) },
+  { id: "cat-2", title: "Wavy Cut Range", description: "Ridged-cut chips for a heartier bite.", itemCount: 5, status: "Active", skus: nextSkus(5) },
   { id: "cat-3", title: "Gourmet Selection", description: "Premium adult-skewing flavours in smaller batches.", itemCount: 8, status: "Active", skus: nextSkus(8) },
   { id: "cat-4", title: "Maxx Extreme Flavours", description: "Bold, youth-targeted spicy range.", itemCount: 8, status: "Active", skus: nextSkus(8) },
   { id: "cat-5", title: "Baked / Better-for-you", description: "Lower-oil line for health-led buyers.", itemCount: 6, status: "Active", skus: nextSkus(6) },
-  { id: "cat-6", title: "Party Packs & Family Sharing", description: "200g+ sharing packs for gatherings.", itemCount: 8, status: "Active", skus: nextSkus(7) },
+  { id: "cat-6", title: "Party Packs & Family Sharing", description: "200g+ sharing packs for gatherings.", itemCount: 7, status: "Active", skus: nextSkus(7) },
   { id: "cat-7", title: "Quick-Commerce Exclusives", description: "SKUs tuned for 10-minute delivery baskets.", itemCount: 10, status: "Active", skus: nextSkus(10) },
-  { id: "cat-8", title: "Modern Trade / Supermarket", description: "Assortment stocked in large-format retail.", itemCount: 10, status: "Active", skus: nextSkus(9) },
+  { id: "cat-8", title: "Modern Trade / Supermarket", description: "Assortment stocked in large-format retail.", itemCount: 9, status: "Active", skus: nextSkus(9) },
   { id: "cat-9", title: "E-commerce Bulk Packs", description: "Multi-pack cartons sold online.", itemCount: 6, status: "Active", skus: nextSkus(6) },
   { id: "cat-10", title: "Airport & Travel Retail", description: "Premium single-serve packs for travel outlets.", itemCount: 5, status: "Active", skus: nextSkus(5) },
   { id: "cat-11", title: "Regional Flavours — South India", description: "Flavours indexed for southern markets.", itemCount: 6, status: "Active", skus: nextSkus(6) },
   { id: "cat-12", title: "Regional Flavours — North India", description: "Flavours indexed for northern markets.", itemCount: 6, status: "Active", skus: nextSkus(6) },
-  { id: "cat-13", title: "Seasonal / Limited Edition", description: "Upcoming seasonal drops, not yet live.", itemCount: 5, status: "Planning", skus: nextSkus(3) },
-  { id: "cat-14", title: "Diwali Limited Edition", description: "Festive packaging drop for Diwali.", itemCount: 4, status: "Planning", skus: nextSkus(2) },
-  { id: "cat-15", title: "Discontinued / Legacy SKUs", description: "Phased-out flavours kept for historical reference.", itemCount: 4, status: "Discontinued", skus: [] },
+  { id: "cat-13", title: "Seasonal / Limited Edition", description: "Upcoming seasonal drops, not yet live.", itemCount: 3, status: "Planning", skus: nextSkus(3) },
+  { id: "cat-14", title: "Diwali Limited Edition", description: "Festive packaging drop for Diwali.", itemCount: 2, status: "Planning", skus: nextSkus(2) },
+  { id: "cat-15", title: "Discontinued / Legacy SKUs", description: "Phased-out flavours kept for historical reference.", itemCount: 0, status: "Discontinued", skus: [] },
   // Always-present catch-all — seeded with the tail of the catalogue that isn't pinned
   // anywhere else yet, so the feature has real content from the start.
   { id: UNLISTED_CATEGORY_ID, title: "Unlisted", description: "SKUs not currently pinned to any category.", itemCount: 9, status: "Active", skus: nextSkus(9) },
@@ -293,7 +293,7 @@ export function computeCatalogueIssues(categories: Category[]): HealthIssue[] {
         helper: "Planning stage",
         categoryId: category.id,
       })
-    } else if (category.skus.length < category.itemCount) {
+    } else if (category.status !== "Discontinued" && category.skus.length < category.itemCount) {
       issues.push({
         id: `cat-issue-${category.id}`,
         type: "category",

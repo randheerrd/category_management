@@ -77,7 +77,7 @@ function StackCard({ sku, categoryId, selected, onToggleSelected, onOpenDetail }
       <div className="flex flex-col gap-0.5">
         <p className="truncate text-sm leading-5 font-medium text-foreground">{sku.name}</p>
         <p className="text-xs leading-4 text-muted-foreground">
-          ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Stores
+          ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Store{sku.stores === 1 ? "" : "s"}
         </p>
       </div>
     </div>
@@ -125,7 +125,7 @@ export function UnlistedSection({ category }: { category: Category }) {
         aria-expanded={expanded}
       >
         <p className="text-sm leading-5 font-semibold text-foreground">
-          {category.skus.length} Item{category.skus.length === 1 ? "" : "s"} are in not in any list
+          {category.skus.length} Item{category.skus.length === 1 ? "" : "s"} {category.skus.length === 1 ? "is" : "are"} not in any list
         </p>
         <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "" : "-rotate-90"}`} />
       </button>

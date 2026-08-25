@@ -204,7 +204,8 @@ export function CatalogueHealthPanel() {
               <div className="flex w-full flex-col items-center text-center">
                 <p className="w-full text-base leading-6 font-semibold text-foreground">{scoreLabel(score)}</p>
                 <p className="w-full text-sm leading-5 text-amber-600">
-                  {attentionCount} Item{attentionCount === 1 ? "" : "s"} need your attention
+                  {attentionCount} Issue{attentionCount === 1 ? "" : "s"} {attentionCount === 1 ? "needs" : "need"} your
+                  attention
                 </p>
               </div>
 

@@ -54,21 +54,15 @@ export function AddCategoryDialog() {
             />
           </label>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm text-muted-foreground">SKU Count</span>
-              <Input value="0" disabled />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <StatusCombobox
-                value={status}
-                onChange={(next) => setStatus(next)}
-                options={categoryStatusOptions(categories)}
-                searchPlaceholder="Search or create status"
-              />
-            </label>
-          </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-muted-foreground">Status</span>
+            <StatusCombobox
+              value={status}
+              onChange={(next) => setStatus(next)}
+              options={categoryStatusOptions(categories)}
+              searchPlaceholder="Search or create status"
+            />
+          </label>
         </div>
 
         <div className="mt-2 flex items-center justify-end gap-2">

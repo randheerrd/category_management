@@ -16,13 +16,21 @@ export interface Product {
   image: string
   price: number
   weightGrams: number
+  description: string
 }
 
-const product = (filename: string, name: string, price: number, weightGrams: number): Product => ({
+const product = (
+  filename: string,
+  name: string,
+  price: number,
+  weightGrams: number,
+  description: string
+): Product => ({
   name,
   image: urlFor(filename),
   price,
   weightGrams,
+  description,
 })
 
 /** One (weight, price) pack-size point. */
@@ -32,6 +40,9 @@ interface FlavourSpec {
   name: string
   /** Packshot used for every size except an explicit `sizeImages` override. */
   image: string
+  /** Short flavour blurb shown in the SKU detail drawer — one per flavour, reused across
+   *  every pack size of that flavour. */
+  description: string
   /** Per-flavour size × price ladder — real Indian retail sizes/pricing, denser for
    *  flagship flavours (more shelf presence) than niche ones, matching how an actual
    *  Lay's assortment fans out. */
@@ -87,49 +98,118 @@ const maxxSizes: SizePoint[] = [
 const flavours: FlavourSpec[] = [
   // Flagship classics (4 × 7 sizes = 28) — the three with a dedicated small-pack photo
   // use it for the 50g point, everything else falls back to the main packshot.
-  { name: "Lay's Classic Salted", image: "lays_classic_salted.jpg", sizes: flagshipSizes },
+  {
+    name: "Lay's Classic Salted",
+    image: "lays_classic_salted.jpg",
+    description: "The original — thin-cut potato chips fried crisp and finished with just the right amount of salt.",
+    sizes: flagshipSizes,
+  },
   {
     name: "American Style Cream & Onion",
     image: "lays_american_style_cream_onion.jpg",
+    description: "A tangy, savoury cream & onion coating over Lay's classic crisp-cut chips.",
     sizes: flagshipSizes,
     sizeImages: { 50: "lays_american_style_cream_onion_50.jpg" },
   },
   {
     name: "India's Magic Masala",
     image: "lays_indias_magic_masala.jpg",
+    description: "India's favourite blend of masala spices on every crunchy chip.",
     sizes: flagshipSizes,
     sizeImages: { 50: "lays_indias_magic_masala_50.jpg" },
   },
   {
     name: "Spanish Tomato Tango",
     image: "lays_spanish_tomato_tango.jpg",
+    description: "A zesty, tangy tomato seasoning with a hint of spice.",
     sizes: flagshipSizes,
     sizeImages: { 50: "lays_spanish_tomato_tango_50.jpg" },
   },
 
   // Secondary classics (5 × 6 sizes = 30)
-  { name: "Chile Limón", image: "lays_chile_limon.jpg", sizes: secondarySizes },
-  { name: "Korean Chilli", image: "lays_korean_chilli.jpg", sizes: secondarySizes },
-  { name: "West Indies Hot & Sweet Chilli", image: "lays_west_indies_hot_sweet_chilli.jpg", sizes: secondarySizes },
-  { name: "Wavy Cream & Onion", image: "lays_wavy_cream_onion.jpg", sizes: secondarySizes },
-  { name: "Himalayan Pink Salt Wafer", image: "lays_himalayan_pink_salt_wafer.jpg", sizes: secondarySizes },
+  {
+    name: "Chile Limón",
+    image: "lays_chile_limon.jpg",
+    description: "Sharp lime tang meets a slow chilli kick.",
+    sizes: secondarySizes,
+  },
+  {
+    name: "Korean Chilli",
+    image: "lays_korean_chilli.jpg",
+    description: "Sweet-and-spicy Korean gochujang-style seasoning.",
+    sizes: secondarySizes,
+  },
+  {
+    name: "West Indies Hot & Sweet Chilli",
+    image: "lays_west_indies_hot_sweet_chilli.jpg",
+    description: "A Caribbean-inspired hot-and-sweet chilli blend.",
+    sizes: secondarySizes,
+  },
+  {
+    name: "Wavy Cream & Onion",
+    image: "lays_wavy_cream_onion.jpg",
+    description: "Cream & onion flavour on a thicker, ridge-cut chip for extra crunch.",
+    sizes: secondarySizes,
+  },
+  {
+    name: "Himalayan Pink Salt Wafer",
+    image: "lays_himalayan_pink_salt_wafer.jpg",
+    description: "A lighter wafer-style chip finished simply with Himalayan pink salt.",
+    sizes: secondarySizes,
+  },
 
   // Gourmet range (3 × 6 sizes = 18)
-  { name: "Gourmet Lime & Cracked Pepper", image: "lays_gourmet_lime_cracked_pepper.jpg", sizes: gourmetSizes },
-  { name: "Gourmet Thai Sweet Chilli", image: "lays_gourmet_thai_sweet_chilli.jpg", sizes: gourmetSizes },
-  { name: "Gourmet Vintage Cheese & Paprika", image: "lays_gourmet_vintage_cheese_paprika.jpg", sizes: gourmetSizes },
+  {
+    name: "Gourmet Lime & Cracked Pepper",
+    image: "lays_gourmet_lime_cracked_pepper.jpg",
+    description: "Bright citrus lime balanced against coarsely cracked black pepper.",
+    sizes: gourmetSizes,
+  },
+  {
+    name: "Gourmet Thai Sweet Chilli",
+    image: "lays_gourmet_thai_sweet_chilli.jpg",
+    description: "A premium sweet-chilli seasoning inspired by Thai street food.",
+    sizes: gourmetSizes,
+  },
+  {
+    name: "Gourmet Vintage Cheese & Paprika",
+    image: "lays_gourmet_vintage_cheese_paprika.jpg",
+    description: "Aged cheese and smoked paprika for a rich, gourmet finish.",
+    sizes: gourmetSizes,
+  },
 
   // Maxx range (3 × 8 sizes = 24)
-  { name: "Maxx Macho Chilli", image: "lays_maxx_macho_chilli.jpg", sizes: maxxSizes },
-  { name: "Maxx Peppery Cheddar", image: "lays_maxx_peppery_cheddar.jpg", sizes: maxxSizes },
-  { name: "Maxx Sizzling Barbeque", image: "lays_maxx_sizzling_barbeque.jpg", sizes: maxxSizes },
+  {
+    name: "Maxx Macho Chilli",
+    image: "lays_maxx_macho_chilli.jpg",
+    description: "An intense chilli hit built for the heat-seekers.",
+    sizes: maxxSizes,
+  },
+  {
+    name: "Maxx Peppery Cheddar",
+    image: "lays_maxx_peppery_cheddar.jpg",
+    description: "Bold cheddar cheese with a peppery kick.",
+    sizes: maxxSizes,
+  },
+  {
+    name: "Maxx Sizzling Barbeque",
+    image: "lays_maxx_sizzling_barbeque.jpg",
+    description: "Smoky, sizzling barbeque seasoning with a hint of sweetness.",
+    sizes: maxxSizes,
+  },
 ]
 // 28 + 30 + 18 + 24 = 100 SKUs across 15 real Lay's flavours.
 
 /** The full flavour range, in the order they should be pinned onto the board. */
 export const products: Product[] = flavours.flatMap((flavour) =>
   flavour.sizes.map(([weightGrams, price]) =>
-    product(flavour.sizeImages?.[weightGrams] ?? flavour.image, flavour.name, price, weightGrams)
+    product(
+      flavour.sizeImages?.[weightGrams] ?? flavour.image,
+      flavour.name,
+      price,
+      weightGrams,
+      flavour.description
+    )
   )
 )
 

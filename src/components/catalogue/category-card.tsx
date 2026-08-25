@@ -66,7 +66,7 @@ function SkuRow({ sku, categoryId, selected, onToggleSelected, onOpenDetail }: S
       <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
         <p className="text-sm leading-5 font-medium text-foreground">{sku.name}</p>
         <p className="text-xs leading-4 text-muted-foreground">
-          ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Stores
+          ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Store{sku.stores === 1 ? "" : "s"}
         </p>
       </div>
       <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/sku:opacity-100">

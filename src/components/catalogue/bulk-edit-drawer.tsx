@@ -417,7 +417,9 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
                 render={
                   <button type="button" className={selectTriggerClasses}>
                     <span className={pickedStores.length ? "" : "text-muted-foreground"}>
-                      {pickedStores.length > 0 ? `${pickedStores.length} Stores` : "Select..."}
+                      {pickedStores.length > 0
+                        ? `${pickedStores.length} Store${pickedStores.length === 1 ? "" : "s"}`
+                        : "Select..."}
                     </span>
                     <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
                   </button>

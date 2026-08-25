@@ -167,7 +167,7 @@ function DarkStoreMultiSelect({
   )
   const citiesInOrder = darkStoreCities.filter((city) => filtered.some((store) => store.city === city))
 
-  const selectedLabel = value.size === 0 ? "All Cities" : `${value.size} selected`
+  const selectedLabel = value.size === 0 ? "All Dark Stores" : `${value.size} selected`
 
   return (
     <>

@@ -402,7 +402,9 @@ export function AddProductDialog({ onCreated }: AddProductDialogProps = {}) {
                   render={
                     <button type="button" className={selectTriggerClasses}>
                       <span className={stockedLocations.length ? "" : "text-muted-foreground"}>
-                        {stockedLocations.length > 0 ? `${stockedLocations.length} Stores` : "Select..."}
+                        {stockedLocations.length > 0
+                          ? `${stockedLocations.length} Store${stockedLocations.length === 1 ? "" : "s"}`
+                          : "Select..."}
                       </span>
                       <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
                     </button>
