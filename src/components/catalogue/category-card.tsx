@@ -83,7 +83,7 @@ function SkuRow({
     >
       <img src={sku.image} alt="" draggable={false} className="size-8 shrink-0 rounded-[3.667px] object-cover" />
       <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
-        <span className="flex items-center gap-0.5">
+        <span className="flex items-center gap-1.5">
           <p className="truncate text-sm leading-5 font-medium text-foreground">{sku.name}</p>
           {otherCategoryTitles.length > 0 && (
             <Tooltip>

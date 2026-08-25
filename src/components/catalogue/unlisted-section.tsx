@@ -96,7 +96,7 @@ function StackCard({
         </span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <span className="flex items-center gap-0.5">
+        <span className="flex items-center gap-1.5">
           <p className="truncate text-sm leading-5 font-medium text-foreground">{sku.name}</p>
           {otherCategoryTitles.length > 0 && (
             <Tooltip>
