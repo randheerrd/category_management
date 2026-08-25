@@ -119,16 +119,25 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
 
   const platformSet = new Set(platformsToAdd)
   const togglePlatform = (platform: string) => {
-    setPlatformsToAdd((prev) => (prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]))
+    if (platformSet.has(platform)) {
+      setPlatformsToAdd((prev) => prev.filter((p) => p !== platform))
+      // Dropping a platform drops any store picks that only made sense under it.
+      setStoresToAdd((prev) => prev.filter((id) => darkStoreLocations.find((s) => s.id === id)?.channel !== platform))
+    } else {
+      setPlatformsToAdd((prev) => [...prev, platform])
+    }
   }
 
+  // A dark store belongs to exactly one channel, so stores can only be added for the
+  // platform(s) being added alongside them in this same bulk edit.
+  const availableStores = darkStoreLocations.filter((store) => platformSet.has(store.channel))
   const storeIdSet = new Set(storesToAdd)
-  const pickedStores = darkStoreLocations.filter((store) => storeIdSet.has(store.id))
+  const pickedStores = availableStores.filter((store) => storeIdSet.has(store.id))
   const toggleStore = (storeId: string) => {
     setStoresToAdd((prev) => (prev.includes(storeId) ? prev.filter((id) => id !== storeId) : [...prev, storeId]))
   }
   const trimmedStoreQuery = storeQuery.trim().toLowerCase()
-  const filteredStores = darkStoreLocations.filter(
+  const filteredStores = availableStores.filter(
     (store) => store.name.toLowerCase().includes(trimmedStoreQuery) || store.city.toLowerCase().includes(trimmedStoreQuery)
   )
   const storeCitiesInOrder = [...new Set(filteredStores.map((s) => s.city))]
@@ -404,6 +413,9 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
             )}
           </div>
 
+          {/* Only appears once a platform is picked — a store belongs to exactly one
+              channel, so there's nothing valid to offer here before that. */}
+          {platformsToAdd.length > 0 && (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">Dark Stores</p>
             <Popover
@@ -505,6 +517,7 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
               </div>
             )}
           </div>
+          )}
         </div>
 
         <SheetFooter>

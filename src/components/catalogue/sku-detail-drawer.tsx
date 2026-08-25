@@ -91,22 +91,33 @@ export function SkuDetailDrawer() {
 
   if (memberCategories.length === 0 || !sku) return null
 
+  const platformSet = new Set(platforms)
   const stockedStoreIdSet = new Set(stockedStoreIds)
-  const stockedLocations = darkStoreLocations.filter((store) => stockedStoreIdSet.has(store.id))
+  // A dark store belongs to exactly one channel, so the picker (and what's already
+  // stocked) is scoped to the platforms this SKU is actually listed on.
+  const availableStores = darkStoreLocations.filter((store) => platformSet.has(store.channel))
+  const stockedLocations = availableStores.filter((store) => stockedStoreIdSet.has(store.id))
 
   const toggleStockedStore = (storeId: string) => {
     setStockedStoreIds((prev) => (stockedStoreIdSet.has(storeId) ? prev.filter((id) => id !== storeId) : [...prev, storeId]))
   }
 
   const trimmedStoreQuery = storeQuery.trim().toLowerCase()
-  const filteredStores = darkStoreLocations.filter(
+  const filteredStores = availableStores.filter(
     (store) => store.name.toLowerCase().includes(trimmedStoreQuery) || store.city.toLowerCase().includes(trimmedStoreQuery)
   )
   const storeCitiesInOrder = [...new Set(filteredStores.map((s) => s.city))]
 
-  const platformSet = new Set(platforms)
   const togglePlatform = (platform: string) => {
-    setPlatforms((prev) => (platformSet.has(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]))
+    if (platformSet.has(platform)) {
+      setPlatforms((prev) => prev.filter((p) => p !== platform))
+      // Dropping a platform drops any store picks that only made sense under it.
+      setStockedStoreIds((prev) =>
+        prev.filter((id) => darkStoreLocations.find((s) => s.id === id)?.channel !== platform)
+      )
+    } else {
+      setPlatforms((prev) => [...prev, platform])
+    }
   }
 
   const pinnedCategoryIdSet = new Set(pinnedCategoryIds)
@@ -379,6 +390,9 @@ export function SkuDetailDrawer() {
             )}
           </div>
 
+          {/* Only appears once a platform is picked — a store belongs to exactly one
+              channel, so there's nothing valid to offer here before that. */}
+          {platforms.length > 0 && (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">Dark Stores</p>
             <Popover
@@ -480,6 +494,7 @@ export function SkuDetailDrawer() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         <SheetFooter>

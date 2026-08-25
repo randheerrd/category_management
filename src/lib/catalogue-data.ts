@@ -34,11 +34,15 @@ export interface CategorySku {
 /** A healthy demo catalogue should mostly read as healthy — most SKUs are fully stocked
  *  everywhere, with a small realistic minority left partial/near-empty so the health
  *  panel's issues list still has real things to catch. Same shape as before (a random
- *  subset of the real dark store list), just biased toward full instead of uniform. */
-function randomStockedStoreIds(): string[] {
-  if (Math.random() < 0.95) return darkStoreLocations.map((store) => store.id)
+ *  subset of the real dark store list), just biased toward full instead of uniform.
+ *
+ *  Only draws from stores on the SKU's own channels — a store belongs to exactly one
+ *  platform, so a SKU listed only on Instamart can't be "stocked" at a Blinkit store. */
+function randomStockedStoreIds(platforms: string[]): string[] {
+  const eligible = darkStoreLocations.filter((store) => platforms.includes(store.channel))
+  if (Math.random() < 0.95) return eligible.map((store) => store.id)
   const fillRate = Math.random()
-  return darkStoreLocations.filter(() => Math.random() < fillRate).map((store) => store.id)
+  return eligible.filter(() => Math.random() < fillRate).map((store) => store.id)
 }
 
 /** Per-channel filled/total, derived from which physical stores are actually stocked —
@@ -165,14 +169,18 @@ const stockCycle: StockStatus[] = ["In Stock", "In Stock", "Low Stock", "Out of 
 let skuSeq = 0
 export function makeSku(product: Product): CategorySku {
   skuSeq += 1
-  const stockedStoreIds = randomStockedStoreIds()
+  const platforms = [platformCycle[(skuSeq - 1) % platformCycle.length]]
+  const stockedStoreIds = randomStockedStoreIds(platforms)
   const darkStoreAvailability = computeDarkStoreAvailability(stockedStoreIds)
   const filled = stockedStoreIds.length
+  // Coverage total only counts stores on the SKU's own channel(s) — the same scoping
+  // skuCoverageLevel uses — not every dark store across every channel.
+  const eligibleTotal = darkStoreLocations.filter((store) => platforms.includes(store.channel)).length
   const total = darkStoreLocations.length
   // Fully-covered SKUs are genuinely in stock — stock and coverage aren't drawn
   // independently, otherwise a random Low/Out-of-Stock pick would keep diluting the
   // "live" bucket even for SKUs that are actually fully stocked everywhere.
-  const stock: StockStatus = filled === total ? "In Stock" : stockCycle[(skuSeq - 1) % stockCycle.length]
+  const stock: StockStatus = filled === eligibleTotal ? "In Stock" : stockCycle[(skuSeq - 1) % stockCycle.length]
   return {
     id: `sku-${skuSeq}`,
     name: product.name,
@@ -184,7 +192,7 @@ export function makeSku(product: Product): CategorySku {
     // same stocked-store list, so they always agree with the detail drawer.
     stores: filled,
     mrp: product.price + Math.max(1, Math.round(product.price * 0.1)),
-    platforms: [platformCycle[(skuSeq - 1) % platformCycle.length]],
+    platforms,
     darkStores: `${filled}/${total}`,
     stock,
     darkStoreAvailability,
@@ -213,7 +221,8 @@ export interface NewProductInput {
  */
 export function createSku(input: NewProductInput): CategorySku {
   skuSeq += 1
-  const stockedStoreIds = input.stockedStoreIds ?? randomStockedStoreIds()
+  const platforms = input.platforms.length > 0 ? input.platforms : [platformCycle[0]]
+  const stockedStoreIds = input.stockedStoreIds ?? randomStockedStoreIds(platforms)
   const darkStoreAvailability = computeDarkStoreAvailability(stockedStoreIds)
   const filled = stockedStoreIds.length
   const total = darkStoreLocations.length
@@ -226,7 +235,7 @@ export function createSku(input: NewProductInput): CategorySku {
     weightGrams: input.weightGrams,
     stores: filled,
     mrp: input.mrp,
-    platforms: input.platforms.length > 0 ? input.platforms : [platformCycle[0]],
+    platforms,
     darkStores: `${filled}/${total}`,
     stock: input.stock,
     darkStoreAvailability,
@@ -379,7 +388,11 @@ export function computeStatusBreakdown(categories: Category[]) {
 /** Sums filled/total across every visible SKU's darkStoreAvailability, per channel.
  *  Discontinued categories are excluded — same rule computeSkuHealthCounts uses, so
  *  a catalogue with several fully-stocked-but-retired SKUs doesn't show coverage
- *  numbers stronger than the health score they're already excluded from. */
+ *  numbers stronger than the health score they're already excluded from.
+ *
+ *  Only counts a channel for a SKU that's actually listed on it (same platform-scoping
+ *  as skuCoverageLevel) — a SKU sold only on Instamart shouldn't drag Blinkit's coverage
+ *  number up or down just because it happens to have a dark-store availability entry for it. */
 export function computeChannelCoverage(categories: Category[]) {
   const totals = new Map<string, { filled: number; total: number }>()
   for (const name of channelNames) totals.set(name, { filled: 0, total: 0 })
@@ -387,7 +400,9 @@ export function computeChannelCoverage(categories: Category[]) {
   for (const category of categories) {
     if (category.status === "Discontinued") continue
     for (const sku of category.skus) {
+      const assigned = new Set(sku.platforms)
       for (const store of sku.darkStoreAvailability) {
+        if (!assigned.has(store.name)) continue
         const entry = totals.get(store.name)
         if (!entry) continue
         entry.filled += store.filled
