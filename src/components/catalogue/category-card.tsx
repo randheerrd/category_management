@@ -83,24 +83,26 @@ function SkuRow({
     >
       <img src={sku.image} alt="" draggable={false} className="size-8 shrink-0 rounded-[3.667px] object-cover" />
       <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 whitespace-nowrap">
-        <p className="text-sm leading-5 font-medium text-foreground">{sku.name}</p>
+        <span className="flex items-center gap-1">
+          <p className="truncate text-sm leading-5 font-medium text-foreground">{sku.name}</p>
+          {otherCategoryTitles.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="flex shrink-0 items-center gap-0.5 rounded-md border-[0.5px] border-primary/20 bg-primary/5 px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap text-primary">
+                    <Pin className="size-3" />
+                    {otherCategoryTitles.length + 1}
+                  </span>
+                }
+              />
+              <TooltipContent side="bottom">Also in: {otherCategoryTitles.join(", ")}</TooltipContent>
+            </Tooltip>
+          )}
+        </span>
         <p className="text-xs leading-4 text-muted-foreground">
           ₹ {sku.price}・{sku.weightGrams}g・{sku.stores} Store{sku.stores === 1 ? "" : "s"}
         </p>
       </div>
-      {otherCategoryTitles.length > 0 && (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span className="flex shrink-0 items-center gap-0.5 rounded-md border-[0.5px] border-primary/20 bg-primary/5 px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap text-primary">
-                <Pin className="size-3" />
-                {otherCategoryTitles.length + 1}
-              </span>
-            }
-          />
-          <TooltipContent side="bottom">Also in: {otherCategoryTitles.join(", ")}</TooltipContent>
-        </Tooltip>
-      )}
       <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/sku:opacity-100">
         <GripVertical className="size-3.5 text-muted-foreground/50" />
       </span>
