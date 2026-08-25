@@ -302,7 +302,6 @@ export function SkuTable() {
           )}
           {groupByCategory
             ? visibleCategories.map((category) => {
-                if (category.skus.length === 0) return null
                 const collapsed = collapsedIds.has(category.id)
                 const dragHandlers = dragHandlersFor(category.id)
                 return (
@@ -314,12 +313,28 @@ export function SkuTable() {
                       {...dragHandlers}
                     />
                     {!collapsed &&
-                      category.skus.map((sku) => (
-                        <ProductRow
-                          key={sku.id}
-                          row={{ sku, skuIds: [sku.id], platforms: sku.platforms, categoryId: category.id }}
-                          {...dragHandlers}
-                        />
+                      (category.skus.length > 0 ? (
+                        category.skus.map((sku) => (
+                          <ProductRow
+                            key={sku.id}
+                            row={{ sku, skuIds: [sku.id], platforms: sku.platforms, categoryId: category.id }}
+                            {...dragHandlers}
+                          />
+                        ))
+                      ) : (
+                        // Empty category (nothing pinned yet, or filters excluded every SKU
+                        // it has) — same placeholder copy as the grid view's CategoryCard,
+                        // still wired to this category's own drop handlers so dragging a
+                        // SKU here pins it in, same as dropping on the header row above.
+                        <TableRow
+                          onDragOver={dragHandlers.onDragOverRow}
+                          onDragLeave={dragHandlers.onDragLeaveRow}
+                          onDrop={dragHandlers.onDropRow}
+                        >
+                          <TableCell colSpan={9} className="py-4 text-center text-sm text-muted-foreground">
+                            Drag a SKU here, or use +Add above to add New SKU
+                          </TableCell>
+                        </TableRow>
                       ))}
                   </Fragment>
                 )

@@ -22,6 +22,30 @@ import { products } from "@/lib/products"
 import type { CsvRow } from "@/lib/csv"
 import { toast } from "@/lib/toast"
 
+// Strips apostrophes so "lays classic salt" matches "Lay's Classic Salted".
+const normalizeSearchText = (s: string) => s.toLowerCase().replace(/['’]/g, "")
+
+/** Whether a category should show at all for a given search query — matches on its own
+ *  title/description/status, or on any of its SKUs (name/platforms/stock/price/weight);
+ *  matching a SKU surfaces its whole category, same as the board's own search does.
+ *  Shared between `visibleCategories` (what actually renders) and `countMatchingSkus`
+ *  (the Filters drawer's live "Show N results" preview) so the two can't disagree —
+ *  previously countMatchingSkus ignored the search box entirely, so the preview count
+ *  shown before hitting Apply could be wildly higher than what Apply actually revealed. */
+function categoryMatchesSearch(category: Category, queryTokens: string[]): boolean {
+  if (queryTokens.length === 0) return true
+  const categoryHaystack = normalizeSearchText(
+    `${category.title} ${category.description} ${category.status} ${category.itemCount}`
+  )
+  if (queryTokens.every((token) => categoryHaystack.includes(token))) return true
+  return category.skus.some((sku) => {
+    const skuHaystack = normalizeSearchText(
+      `${sku.name} ${sku.platforms.join(" ")} ${sku.stock} ${sku.price} ${sku.mrp} ${sku.weightGrams}`
+    )
+    return queryTokens.every((token) => skuHaystack.includes(token))
+  })
+}
+
 export type BoardView = "grid" | "table"
 
 interface CatalogueContextValue {
@@ -747,11 +771,10 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
   }
 
   const visibleCategories = useMemo(() => {
-    // Strip apostrophes so "lays classic salt" matches "Lay's Classic Salted", and split
-    // into words so each has to appear somewhere (not all contiguously) — free word order,
-    // partial words, and punctuation the user wouldn't bother typing all still match.
-    const normalize = (s: string) => s.toLowerCase().replace(/['’]/g, "")
-    const queryTokens = normalize(search).split(/\s+/).filter(Boolean)
+    // Split into words so each has to appear somewhere (not all contiguously) — free
+    // word order, partial words, and punctuation the user wouldn't bother typing all
+    // still match.
+    const queryTokens = normalizeSearchText(search).split(/\s+/).filter(Boolean)
     return categories
       .filter((category) => {
         if (
@@ -761,21 +784,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
         )
           return false
         if (statusFilter.size > 0 && !statusFilter.has(category.status)) return false
-        if (queryTokens.length === 0) return true
-        // Open search — matches on name, category (title/description), price, item
-        // count, grammage, and status (Active/Planning/Discontinued/stock), not just
-        // the SKU name.
-        const categoryHaystack = normalize(
-          `${category.title} ${category.description} ${category.status} ${category.itemCount}`
-        )
-        const matchesCategory = queryTokens.every((token) => categoryHaystack.includes(token))
-        const matchesSku = category.skus.some((sku) => {
-          const skuHaystack = normalize(
-            `${sku.name} ${sku.platforms.join(" ")} ${sku.stock} ${sku.price} ${sku.mrp} ${sku.weightGrams}`
-          )
-          return queryTokens.every((token) => skuHaystack.includes(token))
-        })
-        return matchesCategory || matchesSku
+        return categoryMatchesSearch(category, queryTokens)
       })
       .map((category) => ({
         ...category,
@@ -834,6 +843,11 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
     priceMax: number | null
     grammageFilter: Set<number>
   }) => {
+    // Same search handling as visibleCategories — otherwise this preview count ignores
+    // whatever's currently typed in the board's search box while Apply's actual result
+    // (via visibleCategories) doesn't, so the drawer would promise a count Apply can't
+    // deliver.
+    const queryTokens = normalizeSearchText(search).split(/\s+/).filter(Boolean)
     let count = 0
     for (const category of categories) {
       if (
@@ -843,6 +857,7 @@ export function CatalogueProvider({ children }: { children: ReactNode }) {
       )
         continue
       if (filters.statusFilter.size > 0 && !filters.statusFilter.has(category.status)) continue
+      if (!categoryMatchesSearch(category, queryTokens)) continue
       for (const sku of category.skus) {
         if (skuMatchesFilters(sku, filters)) count += 1
       }

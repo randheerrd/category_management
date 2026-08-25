@@ -207,7 +207,7 @@ export function BulkEditDrawer({ open, onOpenChange, skuIds }: BulkEditDrawerPro
           </div>
           <div className="-mt-3 flex flex-col items-center gap-0.5 text-center">
             <p className="text-sm font-medium text-foreground">Upload Image</p>
-            <p className="text-xs text-muted-foreground">JPEG/PNG (Max size: 2mb) — applied to all selected</p>
+            <p className="text-xs text-muted-foreground">JPEG/PNG (Max size: 2mb)</p>
           </div>
 
           <label className="flex flex-col gap-1.5">

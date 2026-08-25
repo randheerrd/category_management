@@ -196,7 +196,7 @@ export function CatalogueHealthPanel() {
           </div>
         </div>
       ) : (
-        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col justify-between overflow-y-auto px-4 py-5">
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5">
           <div className="flex flex-col items-start gap-4">
             {/* Score + status */}
             <div className="flex w-full flex-col items-center gap-3">
