@@ -39,15 +39,26 @@ function DialogOverlay({
 
 function DialogContent({
   className,
+  overlayClassName,
+  forceOwnOverlay,
   children,
   showCloseButton = true,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  /** Escape hatch for a dialog that must stack above another already-open dialog
+   *  (e.g. a delete confirmation opened from within another dialog) — pass a
+   *  higher z-index (e.g. "z-[60]") so its own backdrop actually covers the one below it. */
+  overlayClassName?: string
+  /** Base UI treats a dialog opened while another is already open as "nested" and skips
+   *  rendering its own backdrop by default (it assumes the parent's backdrop is enough).
+   *  Pass true to force this dialog to render its own backdrop anyway — needed whenever
+   *  overlayClassName is used to visually separate the two, or the parent just won't be dimmed. */
+  forceOwnOverlay?: boolean
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} forceRender={forceOwnOverlay} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(

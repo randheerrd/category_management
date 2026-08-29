@@ -15,7 +15,12 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel = "Delete", onConfirm }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]" showCloseButton>
+      <DialogContent
+        className="z-[60] sm:max-w-[440px]"
+        overlayClassName="z-[60]"
+        forceOwnOverlay
+        showCloseButton
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
